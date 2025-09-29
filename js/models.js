@@ -24,6 +24,7 @@ class ModelManager {
                         const model = this.extractModelInfo(data, filename);
                         if (model) {
                             this.models.push(model);
+                            this.renderModels();
                         }
                     }
                 } catch (error) {
