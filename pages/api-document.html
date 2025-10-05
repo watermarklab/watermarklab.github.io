@@ -568,23 +568,23 @@ mscoco2017_256_32 = MS_COCO_2017_VAL_IMAGES(im_size=256, bit_len=32)
 dataloader_256_32 = DataLoader(mscoco2017_256_32, batch_size=32)
 
 rivagan = rivaGAN(bits_len=32, img_size=256)
-wl.evaluate("save_results/PGWs", rivagan, default_attackers, dataloader_256_32, mode='decode', noise_save=True)
+wl.evaluate("save_results/PGWs", rivagan, default_attackers, dataloader_256_32, noise_save=True)
 
 dctdwtsvd = dctDwtSvd(bits_len=32, img_size=256)
-wl.evaluate("save_results/PGWs", dctdwtsvd, default_attackers, dataloader_256_32, mode='decode', noise_save=True)
+wl.evaluate("save_results/PGWs", dctdwtsvd, default_attackers, dataloader_256_32, noise_save=True)
 
 mscoco2017_256_100 = MS_COCO_2017_VAL_IMAGES(im_size=256, bit_len=100)
 dataloader_256_100 = DataLoader(mscoco2017_256_100, batch_size=32)
 invismark = InvisMark(bits_len=100, img_size=256)
-wl.evaluate("save_results/PGWs", invismark, default_attackers, dataloader_256_100, mode='decode', noise_save=True)
+wl.evaluate("save_results/PGWs", invismark, default_attackers, dataloader_256_100, noise_save=True)
 
 trustmark = TrustMark(bits_len=100, img_size=256)
-wl.evaluate("save_results/PGWs", trustmark, default_attackers, dataloader_256_100, mode='decode', noise_save=True)
+wl.evaluate("save_results/PGWs", trustmark, default_attackers, dataloader_256_100, noise_save=True)
 
 mscoco2017_400_100 = MS_COCO_2017_VAL_IMAGES(im_size=400, bit_len=100)
 dataloader_400_100 = DataLoader(mscoco2017_400_100, batch_size=16)
 stegastamp = StegaStamp(bits_len=100, img_size=400)
-wl.evaluate("save_results/PGWs", stegastamp, default_attackers, dataloader_400_100, mode='decode', noise_save=True)
+wl.evaluate("save_results/PGWs", stegastamp, default_attackers, dataloader_400_100, noise_save=True)
 
 
 mscoco2017_256_100 = MS_COCO_2017_VAL_IMAGES(im_size=256, bit_len=100)
