@@ -5,6 +5,7 @@ Output: one standalone .html file -- inline CSS/JS, no CDN, works offline.
 """
 from __future__ import annotations
 
+import ast
 import base64
 import html
 import json
@@ -352,7 +353,7 @@ MAJOR_CATEGORIES = [
         "title": "attackers",
         "desc": "TestAttacker for benchmarking robustness, and differentiable DiffAttacker for adversarial "
                 "training and the development of new methods. The default <code>AttackersWithFactorsModel()"
-                "</code> ships 44 attack configurations; the paper's benchmark evaluates 34 of them.",
+                "</code> ships 44 attack configurations; the standard benchmark evaluates 34 of them.",
         "groups": [
             ("Attacker collection", ["watermarklab.attackers.attackerloader"]),
             ("Test attackers", ["watermarklab.attackers.testattackers"]),
@@ -413,9 +414,8 @@ MAJOR_CATEGORIES = [
         "icon": "\u25A3",
         "title": "steganography",
         "desc": "iSteganoGAN, an improved SteganoGAN model that uses L-BFGS for more accurate and stable "
-                "watermark extraction. It ships with the library and subclasses "
-                "<code>BaseWatermarkModel</code>, but is not one of the seven modules enumerated in the "
-                "paper.",
+                "watermark extraction. It ships alongside the seven core modules and subclasses "
+                "<code>BaseWatermarkModel</code>.",
         "groups": [("Steganography models", ["watermarklab.steganography"])],
     },
 ]
@@ -518,6 +518,264 @@ def module_sort_key(module: dict) -> tuple:
     return (module["module"].count("."), module["module"])
 
 
+# ------------------------------------------------------------------ examples
+
+PARAM_HINTS = {
+    "save_path": '"save_results"',
+    "output_dir": '"save_results"',
+    "save_dir": '"save_results"',
+    "img_size": "256",
+    "im_size": "256",
+    "bits_len": "32",
+    "bit_len": "32",
+    "batch_size": "32",
+    "device": '"cuda"',
+    "fid_device": '"cuda"',
+    "modelname": '"MyModel"',
+    "cover_list": "cover_images",
+    "cover_img": "cover_image",
+    "stego_list": "stego_images",
+    "stego_img": "stego_image",
+    "cover_images": "cover_images",
+    "secrets": "secrets",
+    "dataloader": "dataloader",
+    "watermark_model": "model",
+    "noise_models": "attackers",
+    "dataset": "dataset",
+    "results": "result_paths",
+    "input_results": "result_paths",
+    "result_paths": "result_paths",
+    "tpr_levels": "[0.9, 0.8, 0.7, 0.6, 0.5]",
+    "factors": "[1, 2, 3, 4, 5]",
+    "factor": "0.5",
+    "attackername": '"MyAttack"',
+    "noisename": '"MyAttack"',
+    "attacker_groups": "attacker_groups",
+    "default_attackers": "attackers",
+    "local_files_only": "True",
+    "k_mode": '"stair_k"',
+    "image_num": "500",
+}
+
+# Hand-written examples for the entry points people reach for first.
+CURATED = {
+    "watermarklab.laboratories.func::evaluate": '''import watermarklab as wl
+from watermarklab.utils.data import DataLoader
+from watermarklab.datasets import MS_COCO_2017_VAL_IMAGES
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+from watermarklab.watermarks.PGWs import rivaGAN
+
+dataset = MS_COCO_2017_VAL_IMAGES(im_size=256, bit_len=32)
+dataloader = DataLoader(dataset, batch_size=32)
+model = rivaGAN(bits_len=32, img_size=256)
+attackers = AttackersWithFactorsModel()
+
+report = wl.evaluate(
+    "save_results/PGWs",       # everything for this run is written here
+    model,                     # the watermark to benchmark
+    attackers,                 # the attack sweep
+    dataloader,                # images + secret bits
+    noise_save=True,           # keep the attacked images
+)''',
+    "watermarklab.laboratories.func::WLab": '''import watermarklab as wl
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+
+lab = wl.WLab(
+    save_path="save_results",
+    noise_models=AttackersWithFactorsModel(),
+    noise_save=True,
+)
+
+# Either benchmark a model directly, or reuse the same lab for several models:
+report = lab.test(watermark_model=model, dataloader=dataloader)''',
+    "watermarklab.attackers.attackerloader::AttackersWithFactorsModel": '''from watermarklab.attackers.attackerloader import (
+    AttackersWithFactorsModel, AttackerWithFactors,
+)
+from watermarklab.attackers.testattackers.blur import GaussianBlur
+
+# All built-in attackers, at every calibrated strength:
+attackers = AttackersWithFactorsModel()
+
+# ...or only the ones you care about:
+attackers = AttackersWithFactorsModel(
+    default_attackers=[
+        AttackerWithFactors(
+            attacker=GaussianBlur(),
+            attackername="GaussianBlur",
+            factors=[0.5, 1.0, 2.0, 4.0],
+            factorsymbol=r"$\\sigma$",
+        )
+    ]
+)''',
+    "watermarklab.watermarks.PGWs.rivaGAN::rivaGAN": '''from watermarklab.watermarks.PGWs import rivaGAN
+
+model = rivaGAN(bits_len=32, img_size=256)
+
+embedded = model.embed(cover_images, secrets)   # -> watermarked images + bits
+extracted = model.extract(embedded.images)      # -> recovered bits
+
+# Benchmark it against the full attack sweep:
+import watermarklab as wl
+wl.evaluate("save_results/PGWs", model, attackers, dataloader)''',
+}
+
+# The three in-generation models share one worked example; {name} is substituted.
+_IGW_EXAMPLE = '''from watermarklab.watermarks.IGWs import {name}
+
+model = {name}(local_files_only=True)
+
+import watermarklab as wl
+from watermarklab.utils.data import DataLoader
+from watermarklab.datasets import MS_COCO_2017_VAL_PROMPTS
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+
+prompts = MS_COCO_2017_VAL_PROMPTS(bit_len=256)
+wl.evaluate(
+    "save_results/IGWs/",
+    model,
+    AttackersWithFactorsModel(),
+    DataLoader(prompts, batch_size=128),
+    noise_save=True,
+)'''
+
+for _key in (
+    "watermarklab.watermarks.IGWs.gaussianshading::GaussianShading",
+    "watermarklab.watermarks.IGWs.stablesignature::StableSignature",
+    "watermarklab.watermarks.IGWs.treering::TreeRing",
+):
+    CURATED[_key] = _IGW_EXAMPLE
+
+
+def parse_params(signature: str) -> list[tuple[str, str, str | None]]:
+    """Split a signature string into (name, annotation, default) triples."""
+    try:
+        tree = ast.parse("def _f" + signature + ": pass")
+    except SyntaxError:
+        return []
+    a = tree.body[0].args  # type: ignore[attr-defined]
+    out: list[tuple[str, str, str | None]] = []
+    positional = list(getattr(a, "posonlyargs", [])) + list(a.args)
+    defaults = list(a.defaults)
+    offset = len(positional) - len(defaults)
+    for i, arg in enumerate(positional):
+        ann = ast.unparse(arg.annotation) if arg.annotation else ""
+        dflt = ast.unparse(defaults[i - offset]) if i >= offset else None
+        out.append((arg.arg, ann, dflt))
+    for kw, d in zip(a.kwonlyargs, a.kw_defaults):
+        ann = ast.unparse(kw.annotation) if kw.annotation else ""
+        out.append((kw.arg, ann, ast.unparse(d) if d is not None else None))
+    if a.vararg:
+        out.append(("*" + a.vararg.arg, "", None))
+    if a.kwarg:
+        out.append(("**" + a.kwarg.arg, "", None))
+    return out
+
+
+def _arg_repr(name: str, ann: str, dflt: str | None) -> str:
+    if dflt is not None:
+        return dflt
+    if name in PARAM_HINTS:
+        return PARAM_HINTS[name]
+    low = (ann or "").lower()
+    if low == "str":
+        return f'"{name}"'
+    if low == "int":
+        return "1"
+    if low == "float":
+        return "0.5"
+    if low == "bool":
+        return "False"
+    if "device" in low:
+        return '"cuda"'
+    if "callable" in low:
+        return "func"
+    if any(k in low for k in ("list", "ndarray", "tensor", "array", "tuple")):
+        return name
+    return name
+
+
+def _import_line(module_name: str, symbol: str) -> str:
+    if module_name == "watermarklab.laboratories.func":
+        return "import watermarklab as wl"
+    parts = module_name.split(".")
+    # a module named after the class it defines is normally imported from its package
+    if len(parts) > 1 and parts[-1].lower() == symbol.lower():
+        return f"from {'.'.join(parts[:-1])} import {symbol}"
+    return f"from {module_name} import {symbol}"
+
+
+def _ref(module_name: str, symbol: str) -> str:
+    return f"wl.{symbol}" if module_name == "watermarklab.laboratories.func" else symbol
+
+
+def _var_name(symbol: str, kind: str, module_name: str = "") -> str:
+    """Pick a readable variable name for an example snippet.
+
+    Decided by the module the symbol lives in, which is far more reliable than
+    guessing from the name (e.g. "ShearAttack" contains "ea").
+    """
+    if kind != "class":
+        return "obj"
+    low = symbol.lower()
+    if "loader" in low:
+        return "loader"
+    if ".attackers." in module_name:
+        return "attack"
+    if ".metrics." in module_name:
+        return "metric"
+    if ".datasets." in module_name or module_name.endswith(".utils.data"):
+        return "dataset"
+    if ".draw." in module_name:
+        return "fig"
+    if ".laboratories." in module_name:
+        return "lab"
+    return "model"
+
+
+def _call_args(signature: str) -> tuple[str, str]:
+    """Return (argument string, return annotation) for a signature."""
+    params = [
+        (n, a, d) for (n, a, d) in parse_params(signature) if n not in ("self", "cls")
+    ]
+    args = ", ".join(
+        f"{n}={_arg_repr(n, a, d)}" for (n, a, d) in params if not n.startswith("*")
+    )
+    ret = ""
+    if "->" in signature:
+        ret = signature.rsplit("->", 1)[1].strip()
+    return args, ret
+
+
+def auto_example(module_name: str, kind: str, symbol: str, signature: str,
+                 cls_name: str | None = None) -> str:
+    args, ret = _call_args(signature)
+    if kind == "class":
+        var = _var_name(symbol, kind, module_name)
+        return f"{_import_line(module_name, symbol)}\n\n{var} = {_ref(module_name, symbol)}({args})"
+    if kind == "function":
+        assign = "" if ret in ("None", "") else "report = "
+        return f"{_import_line(module_name, symbol)}\n\n{assign}{_ref(module_name, symbol)}({args})"
+    receiver = _var_name(cls_name or "", "class", module_name)
+    return f"# method of {cls_name}\n{receiver}.{symbol}({args})"
+
+
+def example_block(module_name: str, kind: str, symbol: str, signature: str,
+                  cls_name: str | None = None) -> str:
+    key = f"{module_name}::{cls_name + '.' + symbol if cls_name else symbol}"
+    snippet = CURATED.get(key)
+    if snippet is None:
+        if kind == "method" and symbol == "__init__":
+            return ""
+        snippet = auto_example(module_name, kind, symbol, signature, cls_name)
+    if not snippet:
+        return ""
+    snippet = snippet.replace("{name}", symbol)
+    return (
+        '<div class="doc-section example-block"><h5>Example</h5>'
+        f"<pre><code>{highlight_code(snippet, 'python')}</code></pre></div>"
+    )
+
+
 def render_class(cls: dict, module_name: str, depth: int = 2) -> str:
     bases = f"({', '.join(html.escape(b) for b in cls['bases'])})" if cls["bases"] else ""
     anchor = slug(f"{module_name}.{cls['name']}")
@@ -531,7 +789,13 @@ def render_class(cls: dict, module_name: str, depth: int = 2) -> str:
         f"{render_decorators(cls['decorators'])}"
         f'<a class="anchor" href="#{anchor}" title="Permalink">#</a></h{4 if depth == 2 else 5}>'
     )
-    parts.append(f'<div class="api-doc">{render_docstring(cls.get("docstring"))}</div>')
+    init_m = next((m for m in cls.get("methods", []) if m["name"] == "__init__"), None)
+    parts.append(
+        '<div class="api-doc">'
+        + render_docstring(cls.get("docstring"))
+        + example_block(module_name, "class", cls["name"], init_m["signature"] if init_m else "()")
+        + "</div>"
+    )
 
     methods = [m for m in cls.get("methods", []) if not hidden_method(m["name"])]
     documented_init = [m for m in methods if m["name"] == "__init__"]
@@ -549,7 +813,12 @@ def render_class(cls: dict, module_name: str, depth: int = 2) -> str:
                 f'<span class="sig sig-method">{color_signature(label, m["signature"])}</span>'
                 f'<a class="anchor" href="#{manchor}" title="Permalink">#</a></h6>'
             )
-            parts.append(f'<div class="api-doc">{render_docstring(m.get("docstring"))}</div>')
+            parts.append(
+                '<div class="api-doc">'
+                + render_docstring(m.get("docstring"))
+                + example_block(module_name, "method", m["name"], m["signature"], cls_name=cls["name"])
+                + "</div>"
+            )
             parts.append("</div>")
         parts.append("</div>")
 
@@ -569,7 +838,10 @@ def render_function(fn: dict, module_name: str) -> str:
             f"{render_decorators(fn['decorators'])}"
             f'<span class="sig">{color_signature(fn["name"], fn["signature"])}</span>'
             f'<a class="anchor" href="#{anchor}" title="Permalink">#</a></h4>',
-            f'<div class="api-doc">{render_docstring(fn.get("docstring"))}</div>',
+            '<div class="api-doc">'
+            + render_docstring(fn.get("docstring"))
+            + example_block(module_name, "function", fn["name"], fn["signature"])
+            + "</div>",
             "</div>",
         ]
     )

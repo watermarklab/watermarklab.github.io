@@ -21,6 +21,19 @@ VERSION = "0.1.22"
 REPO = "https://github.com/watermarklab/watermarklab.github.io"
 DOCS_URL = "https://watermarklab.github.io"
 
+# "standalone" writes the whole site (landing + guides + reference).
+# "merged" only ADDS pages to the existing interactive site, whose own
+# api-document.html already carries the guides and quick-start material.
+MODE = "standalone"
+
+
+def merged() -> bool:
+    return MODE == "merged"
+
+
+def license_href() -> str:
+    return "api-document.html#license" if merged() else "license.html"
+
 # --------------------------------------------------------------------- pages
 
 NAV_CSS = """
@@ -305,7 +318,17 @@ TOKEN_CSS = """
 table.attack-table td{vertical-align:top; font-size:13px}
 table.attack-table td.at-cat{color:var(--muted); font-size:12.5px; white-space:nowrap}
 table.attack-table tbody tr:hover{background:var(--bg-alt)}
-table.imports tr.extra-row td{background:var(--bg-alt); color:var(--muted)}
+
+/* ---------- per-API usage example ---------- */
+.doc-section.example-block{
+  border-top:1px solid var(--border); background:var(--bg-alt);
+  border-radius:10px; padding:11px 13px; margin-top:13px;
+}
+.example-block h5{margin:0 0 8px; color:var(--accent)}
+.example-block pre{
+  margin:0; background:var(--panel); border:1px solid var(--border);
+  font-size:12.5px; line-height:1.6;
+}
 """
 
 POLISH_BODY = (
@@ -411,10 +434,22 @@ def nav_html(active: str, in_pages: bool, menu: bool = True) -> str:
     home = pre + "index.html"
     api = pre + "pages/api-document.html"
     lic = pre + "pages/license.html"
-    paper = pre + "pages/paper.html"
 
     def cls(key: str) -> str:
         return ' class="active"' if key == active else ""
+
+    if merged():
+        # The surrounding site already has its own navigation; keep this one minimal
+        # and point the guides at the existing hand-written page.
+        return (
+            '<header class="topnav">'
+            f'<a class="brand" href="{home}">{LOGO_IMG}<span>WatermarkLab</span></a>'
+            "<nav>"
+            '<a href="api-document.html">Guides &amp; quick start</a>'
+            f'<a href="api-reference.html"{cls("api")}>API Reference</a>'
+            f'<a href="{REPO}">GitHub</a>'
+            "</nav></header>"
+        )
 
     dropdowns = ""
     if menu:
@@ -437,7 +472,6 @@ def nav_html(active: str, in_pages: bool, menu: bool = True) -> str:
         f'<a class="brand" href="{home}">{LOGO_IMG}<span>WatermarkLab</span></a>'
         "<nav>"
         f'<a href="{api}#quick-start"{cls("api")}>API Docs</a>'
-        f'<a href="{paper}"{cls("paper")}>Paper</a>'
         + dropdowns
         + f'<a href="{REPO}">GitHub</a>'
         "</nav></header>"
@@ -446,6 +480,20 @@ def nav_html(active: str, in_pages: bool, menu: bool = True) -> str:
 
 def footer_html(in_pages: bool) -> str:
     pre = "../" if in_pages else ""
+    if merged():
+        return (
+            '<footer class="site"><div class="fgrid">'
+            f'<div><h6>Documentation</h6><a href="api-document.html">Guides &amp; quick start</a>'
+            '<a href="api-reference.html">API Reference</a>'
+            f'<div><h6>Package</h6><a href="https://pypi.org/project/watermarklab/">PyPI</a>'
+            f'<a href="{REPO}">Source</a>'
+            f'<a href="{pre}index.html">Project home</a>'
+            '<a href="api-document.html#license">License</a></div>'
+            "<div><h6>Install</h6><a><code>pip install watermarklab</code></a>"
+            f'<a>Python &ge; 3.9</a><a>Version {VERSION}</a></div>'
+            "</div>"
+            f'<div class="fbot">WatermarkLab {VERSION} &middot; MIT License with Additional Terms</div></footer>'
+        )
     return (
         '<footer class="site"><div class="fgrid">'
         f'<div><h6>Documentation</h6><a href="{pre}pages/api-document.html#quick-start">Quick start</a>'
@@ -845,27 +893,32 @@ MODULE_CARDS = [
 ]
 
 FEATURES = [
-    ("&#9673;", "One evaluation pipeline",
-     "A single <code>wl.evaluate()</code> call runs embedding, visual-quality measurement, the benchmark "
-     "attack sweep, extraction and scoring \u2014 for both PGW and IGW models."),
-    ("&#9881;", "34 benchmark attacks, 6 categories",
-     "Colour, noise, learned &amp; non-learned compression, filtering, geometric distortion and diffusion "
-     "regeneration, each swept over calibrated strengths."),
-    ("&#9636;", "28 differentiable attackers",
-     "DiffAttacker layers \u2014 differentiable JPEG (mask / polynomial / Fourier), Gaussian noise, colour and "
-     "geometric transforms, screen-capture PIMoG and print-capture StegaStamp \u2014 for adversarial training."),
-    ("&#9788;", "10 reference watermark models",
-     "Seven post-generation (DctDwt, DctDwtSvd, RivaGAN, StegaStamp, TrustMark, InvisMark, VINE) and three "
-     "in-generation (Tree-Ring, GaussianShading, StableSignature)."),
-    ("&#9635;", "Robust reversible support",
-     "Arithmetic coding and reversible data hiding utilities, for methods that must also recover the "
-     "original cover image losslessly."),
-    ("&#9638;", "Fair, reproducible reporting",
-     "Standardised metrics \u2014 BER, EA, TPR@x%FPR and RQ-AUC for robustness, PSNR, SSIM, LPIPS and FID for "
-     "quality \u2014 written to one JSON report per model."),
+    ("&#9673;", "One entry point",
+     "A single <code>wl.evaluate()</code> call runs embedding, visual-quality measurement, the attack "
+     "sweep, extraction and scoring. It reads the dataloader to decide whether your model is "
+     "post-generation (images) or in-generation (prompts) and routes the run accordingly."),
+    ("&#9881;", "44 attack configurations, 7 groups",
+     "Compression (classic JPEG / JPEG2000 / WebP and learned BMSHJ2018 / MBT2018 / Cheng2020), "
+     "adversarial embedding, noise, blur, geometric, colour and diffusion regeneration \u2014 each with a "
+     "calibrated strength sweep, all built by <code>AttackersWithFactorsModel()</code>."),
+    ("&#9636;", "34 differentiable attackers",
+     "Drop-in <code>DiffAttacker</code> layers for end-to-end adversarial training, including "
+     "differentiable JPEG (mask / polynomial / Fourier), screen-capture PIMoG and print-capture "
+     "StegaStamp."),
+    ("&#9788;", "11 watermark models",
+     "Seven post-generation (DctDwt, DctDwtSvd, RivaGAN, StegaStamp, TrustMark, InvisMark, VINE), three "
+     "in-generation (Tree-Ring, GaussianShading, StableSignature) and iSteganoGAN."),
+    ("&#9635;", "10 metrics, 5 dataset loaders",
+     "Robustness (BER, EA, NC, NEB, TPR@x%FPR) and imperceptibility (PSNR, SSIM, RMSE, MAE, LPIPS) "
+     "metrics, plus FID for in-generation runs, over MS-COCO 2017 images and prompts, Kodak24 and "
+     "USC-SIPI."),
+    ("&#9638;", "21 plotting helpers, 7 base classes",
+     "Robustness curves, model and attacker rankings, visual-quality and stego comparisons. Extend "
+     "<code>BaseWatermarkModel</code>, <code>BaseTestAttackModel</code>, <code>BaseMetric</code> and the "
+     "other base classes to plug in your own method."),
 ]
 
-# Headline ranking reported in the paper (cumulative RQ-AUC over 34 attackers, 9 methods).
+# Headline ranking over the benchmark attacks (cumulative RQ-AUC).
 PODIUM = [
     ("gold", "\U0001F947", "GaussianShading", "IGW", "Best overall. Only five attacks reach TPR@0.1%FPR = 0.8 against it."),
     ("silver", "\U0001F948", "StegaStamp", "PGW", "Strongest post-generation method; weakest under flipping and rotation."),
@@ -922,12 +975,11 @@ def landing_page() -> str:
         "<div>"
         '<div class="eyebrow"><i></i>Comprehensive &middot; Fair &middot; Open &middot; Extensible</div>'
         '<h1 class="title">Benchmark blind robust<br>image watermarking.</h1>'
-        '<p class="lede">WatermarkLab is a framework for benchmarking <b>all types of blind robust image '
-        "watermarks</b> \u2014 zero-bit and multi-bit, post-generation and in-generation, including robust "
-        "reversible methods \u2014 and for developing new ones.</p>"
+        '<p class="lede">One evaluation pipeline for image watermarking: embed, attack, extract, score '
+        "and plot \u2014 for <b>post-generation and in-generation</b> methods alike. Eleven models, "
+        "44 attack configurations and 34 differentiable attackers ship with it.</p>"
         '<div class="cta">'
         '<a class="btn pri" href="pages/api-document.html">Get Started &rarr;</a>'
-        '<a class="btn gho" href="pages/api-document.html#quick-start">Read the guide</a>'
         "</div>"
         '<div class="install"><span class="p">$</span><code>pip install watermarklab</code></div>'
         "</div></section>"
@@ -937,27 +989,25 @@ def landing_page() -> str:
         f'<div class="feats">{feats}</div></section>'
 
         '<section class="band"><h2 class="sec">The framework at a glance</h2>'
-        '<p class="secsub">The paper\u2019s seven core modules plus the steganography module the library '
-        "also ships. Symbols and signatures are generated from the source tree by static AST analysis.</p>"
+        '<p class="secsub">Symbols and signatures are generated from the source tree by static AST '
+        "analysis.</p>"
         '<div class="stats">'
         '<div class="stat reveal"><b>8</b><span>modules</span></div>'
-        '<div class="stat reveal"><b>10</b><span>reference watermark models</span></div>'
-        '<div class="stat reveal"><b>34</b><span>benchmark attacks</span></div>'
-        '<div class="stat reveal"><b>28</b><span>differentiable attackers</span></div>'
-        '<div class="stat reveal"><b>6</b><span>attack categories</span></div>'
-        '<div class="stat reveal"><b>8</b><span>evaluation metrics</span></div>'
+        '<div class="stat reveal"><b>11</b><span>watermark models</span></div>'
+        '<div class="stat reveal"><b>44</b><span>attack configurations</span></div>'
+        '<div class="stat reveal"><b>34</b><span>differentiable attackers</span></div>'
+        '<div class="stat reveal"><b>5</b><span>datasets</span></div>'
+        '<div class="stat reveal"><b>10</b><span>metrics</span></div>'
         "</div></section>"
 
         '<section class="band"><h2 class="sec">What the benchmark finds</h2>'
-        '<p class="secsub">Nine methods, 34 attacks, ranked by cumulative RQ-AUC. The strongest '
-        "post-generation method is still StegaStamp; in-generation methods lead overall.</p>"
+        '<p class="secsub">Ranked by cumulative RQ-AUC across the attack sweep. The strongest '
+        "post-generation method is StegaStamp; in-generation methods lead overall.</p>"
         f'<div class="podium">{podium}</div><ul class="findings">{findings}</ul>'
-        '<p class="secsub" style="margin-top:18px">'
-        '<a class="btn gho" href="pages/paper.html">Read the paper &rarr;</a></p></section>'
+        "</section>"
 
         '<section class="band"><h2 class="sec">Core modules</h2>'
-        '<p class="secsub">The paper\u2019s seven core modules, plus the <code>steganography</code> module '
-        "the library also ships \u2014 jump straight into any part of the API reference.</p>"
+        '<p class="secsub">Eight modules \u2014 jump straight into any part of the API reference.</p>'
         f'<div class="mods">{cards}</div></section>'
 
         '<div class="final reveal"><h2>Start benchmarking in three lines</h2>'
@@ -1051,6 +1101,15 @@ def section_quickstart() -> str:
 
 
 def section_sidebar_onpage() -> str:
+    if merged():
+        links = [("Guides &amp; quick start", "api-document.html"), ("API Reference Overview", "#api-overview")]
+        links += [
+            (c["icon"] + "&nbsp; " + html.escape(c["title"]), "#cat-" + c["id"])
+            for c in bd.MAJOR_CATEGORIES
+        ]
+        items = "".join(f'<a class="nav-sym" href="{href}">{label}</a>' for label, href in links)
+        return f'<h4>On this page</h4><div class="nav-module nav-module-static">{items}</div>'
+
     links = [
         ("Quick start", "#quick-start"),
         ("1. Evaluate your watermark", "#eval-watermark"),
@@ -1126,10 +1185,15 @@ def api_page(dump: dict) -> str:
         '<p style="margin:0;color:var(--muted);max-width:820px">'
         f"{class_count} classes and {fn_count} functions across {module_count} modules, generated by static "
         "AST analysis of the source tree. Private helpers and non-exported internals are omitted."
-        "</p></div>"
+        + (
+            ' Step-by-step guides and runnable quick starts live under '
+            '<a href="api-document.html">Guides &amp; quick start</a>.'
+            if merged()
+            else ""
+        )
+        + "</p></div>"
         + category_chips()
-        + quick
-        + section_guide()
+        + ("" if merged() else quick + section_guide())
         + '<h2 class="anchor-offset" id="api-overview" style="margin-top:40px">API Reference Overview</h2>'
         + f'<p class="group-desc">{API_OVERVIEW}</p>'
         + f'<div class="catgrid">{cards}</div>'
@@ -1167,10 +1231,10 @@ def section_guide() -> str:
         "<li>Structured result reporting with visualizations</li>"
         "</ul>"
         '<div class="statgrid" style="margin-top:22px">'
-        '<div class="stat"><b>7</b><span>core modules</span></div>'
-        '<div class="stat"><b>10</b><span>reference watermark models</span></div>'
-        '<div class="stat"><b>34</b><span>benchmark attacks</span></div>'
-        '<div class="stat"><b>28</b><span>differentiable attackers</span></div>'
+        '<div class="stat"><b>8</b><span>modules</span></div>'
+        '<div class="stat"><b>11</b><span>watermark models</span></div>'
+        '<div class="stat"><b>44</b><span>attack configurations</span></div>'
+        '<div class="stat"><b>34</b><span>differentiable attackers</span></div>'
         "</div>"
 
         '<h2 class="anchor-offset" id="installation">Installation</h2>'
@@ -1288,216 +1352,6 @@ def section_eval_attacker() -> str:
     return content
 
 
-PAPER_TITLE = ("WatermarkLab: A Comprehensive Framework for Robust Image Watermarks "
-               "Benchmarking and Development")
-
-# The seven core modules as enumerated in the paper. The library additionally ships
-# a steganography module, which is shown separately so the count stays honest.
-PAPER_MODULE_IDS = ["watermarks", "attackers", "metrics", "tools", "datasets", "laboratories", "draw"]
-
-# The 34 benchmark attackers of Table 1 in the paper, with their intensity sweeps.
-ATTACK_TABLE = [
-    ("Diffusion", "Diffusion-Regen", "t \u2208 {20, 40, 60, 80, 100, 120, 140, 160, 180, 200}"),
-    ("Diffusion", "Mult-Diffusion", "N \u2208 {1, 2, 3, 4, 6}, t = 60"),
-    ("Compression (learned)", "BMshj2018Factorized", "q \u2208 {1, 2, 3, 4, 5, 6, 7, 8}"),
-    ("Compression (learned)", "BMshj2018Hyperprior", "q \u2208 {1, 2, 3, 4, 5, 6, 7, 8}"),
-    ("Compression (learned)", "MBT2018Mean", "q \u2208 {1, 2, 3, 4, 5, 6, 7, 8}"),
-    ("Compression (learned)", "MBT2018", "q \u2208 {1, 2, 3, 4, 5, 6, 7, 8}"),
-    ("Compression (learned)", "Cheng2020", "q \u2208 {1, 2, 3, 4, 5, 6}"),
-    ("Compression (classic)", "JPEGCompression", "q \u2208 {90, 80, 70, 60, 50, 40, 30, 20, 10}"),
-    ("Compression (classic)", "JPEG2000Compression", "c \u2208 {90, 80, 70, 60, 50, 40, 30, 20, 10}"),
-    ("Compression (classic)", "WebPCompression", "q \u2208 {90, 80, 70, 60, 50, 40, 30, 20, 10}"),
-    ("Noise", "Salt&PepperNoise", "p \u2208 {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}"),
-    ("Noise", "GaussianNoise", "\u03c3 \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Noise", "PoissonNoise", "\u03b1 \u2208 {30.0, 25.0, 20.0, 15.0, 10.0, 5.0, 2.0, 1.0, 0.5, 0.3}"),
-    ("Filter", "GaussianBlur", "\u03c3 \u2208 {0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}"),
-    ("Filter", "MedianFilter", "k \u2208 {3, 5, 7, 9, 11, 13, 15, 17, 21, 23}"),
-    ("Filter", "MeanFilter", "k \u2208 {3, 5, 7, 9, 11, 13, 15, 17, 21, 23}"),
-    ("Filter", "UnsharpMasking", "\u03bb \u2208 {0.1, 0.3, 0.6, 1.05, 1.73, 2.74, 4.26, 6.53, 9.95, 15.08}"),
-    ("Geometric", "Resize", "s \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Geometric", "Rotation", "\u03b8 \u2208 {30, 60, 90, 120, 150, 180, 210, 240, 270}"),
-    ("Geometric", "FlipAttack", "d \u2208 {H, V}"),
-    ("Geometric", "Crop", "r \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Geometric", "Cropout", "r \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Geometric", "RegionZoom", "r \u2208 {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9}"),
-    ("Geometric", "PixelDropout", "p \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Colour", "ContrastReduction", "\u03b1 \u2208 {0.01, 0.03, 0.05, 0.07, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9}"),
-    ("Colour", "ContrastEnhancement", "\u03b3 \u2208 {1.1, 1.3, 1.5, 2.0, 3.0, 5.0, 7.0, 9.0, 10.0, 11.0}"),
-    ("Colour", "ColorQuantization", "q \u2208 {4, 8, 12, 16, 20, 28, 36, 42, 50, 76}"),
-    ("Colour", "ChromaticAberration", "s \u2208 {1, 3, 5, 7, 9, 13, 17, 21, 25, 30}"),
-    ("Colour", "GammaCorrection", "\u03b3 \u2208 {1.5, 3, 6, 7, 9, 13, 21, 37, 69, 133}"),
-    ("Colour", "HueShift", "\u0394h \u2208 {1, 3, 7, 15, 28, 48, 77, 115, 145, 170}"),
-    ("Colour", "Darken", "\u03b2 \u2208 {0.006, 0.018, 0.047, 0.119, 0.269, 0.5, 0.731, 0.881, 0.953, 0.982}"),
-    ("Colour", "Brighten", "\u03b2 \u2208 {1.1, 1.3, 1.6, 2.0, 3.0, 7.0, 15.0, 31.0, 63.0, 95.0}"),
-    ("Colour", "Desaturate", "\u03c3d \u2208 {0.006, 0.018, 0.047, 0.119, 0.269, 0.5, 0.731, 0.881, 0.953, 0.982}"),
-    ("Colour", "Oversaturate", "\u03c3o \u2208 {1.1, 1.3, 1.6, 2.0, 3.0, 7.0, 11.0, 15.0, 19.0, 23.0}"),
-]
-
-ATTACK_CATEGORIES = [
-    ("Colour transformations", "Saturation, brightness and contrast adjustment, colour quantization, chromatic aberration, gamma correction and hue shift."),
-    ("Noise attacks", "Gaussian noise, Poisson noise and salt-and-pepper noise."),
-    ("Compression", "Classic codecs (JPEG, JPEG2000, WebP) and learned / VAE-based compression (BMSHJ2018, MBT2018, Cheng2020)."),
-    ("Filter attacks", "Gaussian blur, mean filter, median filter and unsharp masking."),
-    ("Diffusion regeneration", "Regenerating the image through a diffusion model, which removes the watermark most aggressively."),
-    ("Geometric transformations", "Scaling, rotation, flipping, cropping, cropout, region zoom and pixel dropout."),
-]
-
-BIBTEX = """@misc{watermarklab2026,
-  title        = {WatermarkLab: A Comprehensive Framework for Robust
-                  Image Watermarks Benchmarking and Development},
-  author       = {TODO: add the author list before camera-ready},
-  year         = {2026},
-  note         = {Submitted to ICLR 2026},
-  howpublished = {\\url{https://watermarklab.github.io}}
-}"""
-
-
-def paper_page() -> str:
-    abstract = (
-        "With the growing demand for multimedia content, image protection has become increasingly "
-        "important. Robust image watermarking, as a core technology for copyright protection, has "
-        "attracted extensive attention. To advance research in this field, we propose WatermarkLab, a "
-        "comprehensive framework for systematic benchmarking of robust image watermarks and the "
-        "development of new methods. WatermarkLab supports benchmarking of all types of <em>blind</em> "
-        "robust image watermarks, including <em>in-generation</em> watermarks and <em>post-generation</em> "
-        "watermarks. Beyond benchmarking, WatermarkLab integrates 10 representative watermarking methods "
-        "for systematic comparison. It also includes 34 attackers for benchmarking and 28 differentiable "
-        "attackers for development. Furthermore, we evaluate the robustness of 9 watermarking methods "
-        "under 34 attackers and give their weaknesses, assisting researchers in enhancing more robust "
-        "watermarking methods and designing new watermark removal attackers. In addition, the framework "
-        "provides auxiliary tools such as arithmetic coding and <em>reversible data hiding</em> commonly "
-        "used in <em>robust reversible watermarking</em>. For result visualization, WatermarkLab offers "
-        "comprehensive visualization tools and an interactive website, enabling researchers to intuitively "
-        "analyze and compare benchmarking results. In summary, WatermarkLab is a powerful framework, "
-        "aiming to establish a <em>comprehensive</em>, <em>fair</em>, <em>open</em>, and "
-        "<em>extensive</em> platform for <em>blind robust image watermark</em> benchmarking and "
-        "development."
-    )
-
-    contributions = [
-        "<strong>Coverage.</strong> WatermarkLab supports the benchmarking and development of all types "
-        "of blind robust image watermarking \u2014 zero-bit and multi-bit, PGW and IGW, as well as robust "
-        "reversible watermarking that can detect arbitrary attacks and recover the original cover "
-        "losslessly. It integrates 10 representative methods (7 PGW, 3 IGW) that can be loaded directly "
-        "as baselines, and adopts a modular design so researchers can extend the base classes to "
-        "benchmark their own methods.",
-        "<strong>Attackers and tools.</strong> Six categories of attack methods \u2014 compression, colour "
-        "transformation, geometric distortion, noise addition, diffusion-based regeneration and filtering "
-        "\u2014 totalling 34 benchmark attackers, plus 28 differentiable attackers that can be applied "
-        "in adversarial training. The framework also ships auxiliary tools such as compression coding and "
-        "reversible data hiding.",
-        "<strong>Analysis.</strong> We evaluate 9 schemes (3 IGW, 6 PGW) under 34 attackers and analyse "
-        "their robustness. Mainstream IGWs perform well under most attacks but retain limitations; "
-        "StegaStamp remains the strongest PGW and GaussianShading leads the IGWs while still showing "
-        "vulnerability to geometric distortions.",
-    ]
-
-    modules_rows = "".join(
-        f"<tr><td><code>{c['id']}</code></td><td>{c['desc']}</td></tr>"
-        for c in bd.MAJOR_CATEGORIES
-        if c["id"] in PAPER_MODULE_IDS
-    )
-    extra_rows = "".join(
-        f'<tr class="extra-row"><td><code>{c["id"]}</code></td><td>{c["desc"]}</td></tr>'
-        for c in bd.MAJOR_CATEGORIES
-        if c["id"] not in PAPER_MODULE_IDS
-    )
-
-    cat_cards = "".join(
-        f'<div class="modcard"><h4>{html.escape(name)}</h4><p>{desc}</p></div>'
-        for name, desc in ATTACK_CATEGORIES
-    )
-
-    attack_rows = "".join(
-        f'<tr><td class="at-cat">{html.escape(cat)}</td><td><code>{html.escape(name)}</code></td>'
-        f"<td>{html.escape(rng)}</td></tr>"
-        for cat, name, rng in ATTACK_TABLE
-    )
-
-    podium = "".join(
-        f'<div class="pcard {cls}"><div class="medal">{medal}</div><h4>{html.escape(name)}</h4>'
-        f'<div class="ptag">{html.escape(tag)}</div><p>{html.escape(note)}</p></div>'
-        for cls, medal, name, tag, note in PODIUM
-    )
-    findings = "".join(f"<li>{f}</li>" for f in FINDINGS)
-
-    content = (
-        '<p class="breadcrumb">Paper</p>'
-        f"<h1>{html.escape(PAPER_TITLE)}</h1>"
-        '<p class="lead">A framework for systematic benchmarking and development of blind robust image '
-        "watermarking. Submitted to ICLR 2026.</p>"
-
-        '<h2 class="anchor-offset" id="abstract">Abstract</h2>'
-        f"<p>{abstract}</p>"
-
-        '<h2 class="anchor-offset" id="contributions">Contributions</h2>'
-        "<ol>" + "".join(f"<li>{c}</li>" for c in contributions) + "</ol>"
-
-        '<h2 class="anchor-offset" id="modules">Seven core modules</h2>'
-        "<p>WatermarkLab adopts a modular and extensible architecture built from seven core modules. The "
-        "API reference is organised by exactly this taxonomy.</p>"
-        '<table class="imports"><thead><tr><th>Module</th><th>Role</th></tr></thead>'
-        f"<tbody>{modules_rows}{extra_rows}</tbody></table>"
-        '<p style="color:var(--muted);font-size:13px">The shaded row is shipped by the library but is not '
-        "counted among the paper\u2019s seven core modules.</p>"
-
-        '<h2 class="anchor-offset" id="attackers">Attackers for training and testing</h2>'
-        "<p><strong>TestAttacker</strong> provides 34 different attacks for benchmarking, grouped into six "
-        "categories. Each can be applied at multiple strengths to measure robustness under increasing "
-        "distortion.</p>"
-        f'<div class="cardgrid">{cat_cards}</div>'
-        "<p><strong>DiffAttacker</strong> provides 28 differentiable attackers for end-to-end training "
-        "\u2014 including differentiable JPEG (polynomial, Fourier and mask rounding), Gaussian noise "
-        "injection, colour and geometric transformations, and the physical distortions of screen capture "
-        "(PIMoG) and print capture (StegaStamp) \u2014 so a model can learn to resist them.</p>"
-
-        '<h3>The 34 benchmark attackers</h3>'
-        '<table class="imports attack-table"><thead><tr><th>Category</th><th>Attack</th>'
-        "<th>Strength / parameter range</th></tr></thead>"
-        f"<tbody>{attack_rows}</tbody></table>"
-
-        '<h2 class="anchor-offset" id="metrics">Metrics</h2>'
-        '<table class="imports"><thead><tr><th>Metric</th><th>What it measures</th></tr></thead><tbody>'
-        "<tr><td><code>BER</code></td><td>Bit Error Rate \u2014 proportion of incorrectly extracted bits "
-        "relative to the embedded payload.</td></tr>"
-        "<tr><td><code>EA</code></td><td>Extraction Accuracy \u2014 rate at which protected images are "
-        "correctly identified under distortion.</td></tr>"
-        "<tr><td><code>TPR@x%FPR</code></td><td>True positive rate at a chosen false-positive rate. "
-        "Works for both zero-bit and multi-bit watermarks, so it enables fair comparison across "
-        "paradigms.</td></tr>"
-        "<tr><td><code>RQ-AUC</code></td><td>Area under the TPR@x%FPR vs. PSNR curve; a larger value "
-        "means stronger robustness. Cumulative RQ-AUC produces the model and attacker rankings.</td></tr>"
-        "<tr><td><code>PSNR@(TPR@x%FPR = r)</code></td><td>Attack efficiency: the PSNR at which an attack "
-        "drives detection down to target rate r. Higher PSNR means a more efficient attack \u2014 less "
-        "visible damage for the same result.</td></tr>"
-        "<tr><td><code>PSNR / SSIM / LPIPS / FID</code></td><td>Visual quality, from signal level through "
-        "structure and perception to distribution distance.</td></tr>"
-        "</tbody></table>"
-
-        '<h2 class="anchor-offset" id="results">Results</h2>'
-        "<p>Nine methods under 34 attackers, ranked by cumulative RQ-AUC. GaussianShading takes gold, "
-        "StegaStamp silver and VINE bronze.</p>"
-        f'<div class="podium">{podium}</div><ul class="findings">{findings}</ul>'
-        "<p>Notably, only five attacks reach TPR@0.1%FPR = 0.8 against GaussianShading, which is why it "
-        "leads by a considerable margin. In-generation methods win overall because mapping the watermark "
-        "into the latent distribution spreads it more evenly through the image than a post-hoc "
-        "perturbation can.</p>"
-
-        '<h2 class="anchor-offset" id="ethics">Ethical considerations</h2>'
-        "<p>The framework includes watermark attack functionality. To ensure research safety it should be "
-        "used exclusively for scientific research and the development of protective mechanisms, and users "
-        "must follow responsible usage guidelines. See the "
-        '<a href="license.html">licence</a>, which makes this an explicit condition of use.</p>'
-
-        '<h2 class="anchor-offset" id="citation">Citation</h2>'
-        "<p>BibTeX entry for this work:</p>"
-        + code_box(BIBTEX, "bibtex")
-        + '<p style="color:var(--muted);font-size:13px">The author list is left as a placeholder because '
-        "the submission is anonymous; fill it in before the camera-ready version.</p>"
-    )
-    return doc_page("Paper", "paper", content, PAPER_TITLE)
-
-
 def license_page(license_text: str) -> str:
     escaped = html.escape(license_text)
     content = (
@@ -1518,12 +1372,14 @@ def license_page(license_text: str) -> str:
 
 
 def main() -> None:
-    global LOGO_URI, LOGO_IMG
+    global LOGO_URI, LOGO_IMG, MODE
 
     dump_path = Path(sys.argv[1])
     logo_path = Path(sys.argv[2])
     out_root = Path(sys.argv[3])
     license_path = Path(sys.argv[4]) if len(sys.argv) > 4 else None
+    if len(sys.argv) > 5 and sys.argv[5] == "merged":
+        MODE = "merged"
 
     raw = logo_path.read_bytes()
     LOGO_URI = "data:image/svg+xml;base64," + base64.b64encode(raw).decode("ascii")
@@ -1533,6 +1389,18 @@ def main() -> None:
     pages_dir = out_root / "pages"
     pages_dir.mkdir(parents=True, exist_ok=True)
 
+    if merged():
+        # Additive mode: only add the two new pages to the existing site and leave
+        # every other file alone.
+        new_pages = {
+            pages_dir / "api-reference.html": api_page(dump),
+            }
+        for path, content in new_pages.items():
+            content = content.replace('href="license.html"', 'href="api-document.html#license"')
+            path.write_text(content, encoding="utf-8")
+            print(f"wrote {path}  ({len(content):,} chars)")
+        return
+
     license_text = ""
     if license_path and license_path.is_file():
         license_text = license_path.read_text(encoding="utf-8")
@@ -1540,7 +1408,6 @@ def main() -> None:
     outputs = {
         out_root / "index.html": landing_page(),
         pages_dir / "api-document.html": api_page(dump),
-        pages_dir / "paper.html": paper_page(),
         pages_dir / "license.html": license_page(license_text),
     }
     for path, content in outputs.items():
