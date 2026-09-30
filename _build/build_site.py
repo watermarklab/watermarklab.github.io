@@ -586,31 +586,33 @@ header.lnav nav a.hot{
   background:linear-gradient(135deg,var(--cyan),#7dd3fc); box-shadow:0 0 22px rgba(34,211,238,.34);
 }
 .hero{
-  min-height:calc(100vh - 64px); display:grid; grid-template-columns:minmax(0,470px) minmax(0,1fr);
-  align-items:center; gap:40px; padding:56px 60px 70px; max-width:1400px; margin:0 auto;
+  min-height:calc(100vh - 64px); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:22px;
+  padding:36px 24px 56px; max-width:1100px; margin:0 auto; text-align:center;
 }
 .stage{position:relative; display:flex; align-items:center; justify-content:center}
-.stage canvas{display:block; width:100%; max-width:440px; height:auto; cursor:crosshair}
+.stage canvas{display:block; width:100%; max-width:400px; height:auto; cursor:crosshair}
 .stage .halo{
-  position:absolute; width:430px; height:430px; border-radius:50%; pointer-events:none;
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:390px; height:390px; border-radius:50%; pointer-events:none;
   background:radial-gradient(circle,rgba(34,211,238,.16),transparent 62%); filter:blur(28px);
 }
 .stage .hint{display:none}
 .eyebrow{
   display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.16em;
   text-transform:uppercase; color:var(--cyan); border:1px solid rgba(34,211,238,.3);
-  border-radius:999px; padding:5px 13px; background:rgba(34,211,238,.07); margin-bottom:20px;
+  border-radius:999px; padding:5px 13px; background:rgba(34,211,238,.07); margin-bottom:16px;
 }
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.35}}
 h1.title{
-  margin:0 0 16px; font-size:clamp(38px,5.4vw,66px); line-height:1.03; letter-spacing:-1.6px; font-weight:760;
+  margin:0 0 14px; font-size:clamp(34px,4.6vw,56px); line-height:1.05; letter-spacing:-1.4px; font-weight:760;
   background:linear-gradient(112deg,#ffffff 12%,#9fd8ff 44%,#c4a2ff 78%,#ffffff 100%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
-.lede{font-size:17.5px; color:var(--dim); max-width:620px; margin:0 0 26px}
+.lede{font-size:16.5px; color:var(--dim); max-width:680px; margin:0 auto 20px}
 .lede b{color:#dbe6f7; font-weight:600}
-.cta{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:22px}
+.cta{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px; justify-content:center}
 .btn{
   display:inline-flex; align-items:center; gap:9px; padding:13px 25px; border-radius:11px;
   font-weight:640; font-size:15px; border:1px solid transparent; transition:transform .15s ease,box-shadow .15s ease;
@@ -697,10 +699,7 @@ footer.lfoot a:hover{color:var(--cyan)}
 .reveal{opacity:0; transform:translateY(22px); transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1; transform:none}
 @media (max-width:1000px){
-  .hero{grid-template-columns:1fr; padding:34px 24px 60px; text-align:center}
-  .stage{order:-1}
-  .cta,.install{justify-content:center}
-  .lede{margin-left:auto;margin-right:auto}
+  .hero{padding:30px 20px 54px; gap:22px}
   section.band{padding:56px 24px}
   .final{margin:10px 24px 70px; padding:40px 22px}
   footer.lfoot{padding:26px 24px}
@@ -716,7 +715,7 @@ PARTICLES_JS = """
   var ctx = canvas.getContext('2d', {alpha:true});
   var img = new Image();
   var particles = [];
-  var W = 440, H = 440 * 120.33 / 101.32;
+  var W = 400, H = 400 * 120.33 / 101.32;
   var dpr = Math.min(window.devicePixelRatio || 1, 2);
   var mouse = {x:-9999, y:-9999, on:false};
   var t0 = Date.now();
@@ -726,7 +725,11 @@ PARTICLES_JS = """
   canvas.style.width = W+'px'; canvas.style.height = H+'px';
 
   function fit(){
-    var maxW = Math.min(440, document.querySelector('.stage').clientWidth || 440);
+    var stage = document.querySelector('.stage');
+    var stageW = (stage && stage.clientWidth) || 400;
+    // Also cap by viewport height so the whole hero (logo + headline + buttons)
+    // stays inside one screen on shorter displays.
+    var maxW = Math.min(400, stageW, window.innerHeight * 0.42 * (W / H));
     var s = maxW / W;
     canvas.style.width = (W*s)+'px';
     canvas.style.height = (H*s)+'px';
@@ -970,7 +973,7 @@ def landing_page() -> str:
 
         '<section class="hero">'
         '<div class="stage"><div class="halo"></div>'
-        '<canvas id="logoCanvas" width="440" height="522" aria-label="WatermarkLab logo particle animation"></canvas>'
+        '<canvas id="logoCanvas" width="400" height="475" aria-label="WatermarkLab logo particle animation"></canvas>'
         "</div>"
         "<div>"
         '<div class="eyebrow"><i></i>Comprehensive &middot; Fair &middot; Open &middot; Extensible</div>'
