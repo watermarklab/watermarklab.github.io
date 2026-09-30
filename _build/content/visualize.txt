@@ -1,0 +1,26 @@
+import watermarklab as wl
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+
+results = ['saved_all_json/result_dctDwtSvd.json',
+           'saved_all_json/result_rivaGAN.json',
+           'saved_all_json/result_TrustMark-Q.json',
+           'saved_all_json/result_InvisMark.json',
+           'saved_all_json/result_StegaStamp.json',
+           'saved_all_json/result_VINE-R.json',
+           'saved_all_json/result_GaussianShading.json',
+           'saved_all_json/result_StableSignature.json',
+           'saved_all_json/result_TreeRing-Ring.json']
+
+default_attackers = AttackersWithFactorsModel()
+wl.draw.plot_model_robustness_under_single_attack(results, "draw_ALL/MR_SA")
+wl.draw.plot_model_robustness_under_all_attack(results, "draw_ALL/MR_AA")
+wl.draw.plot_model_robustness_scores_under_all_attacks(results, "draw_ALL/MRS_AA")
+wl.draw.plot_model_robustness_ranking_under_single_attack(results, "draw_ALL/MRK_SA")
+wl.draw.test_compute_overall_robustness_scores(results)
+wl.draw.plot_model_robustness_ranking_by_attacker_group(results, "draw_ALL/MRK_GA", default_attackers.attacker_groups)
+wl.draw.plot_model_overall_robustness_ranking(results, "draw_ALL/MRK_MO")
+wl.draw.plot_all_attack_ranking(results, "draw_ALL/ARK")
+wl.draw.plot_attack_effectiveness_at_tpr_levels(results, "draw_ALL/ARK_TPR", tpr_levels=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1])
+wl.draw.plot_visual_quality(results, "draw_ALL/VQ", show_dataset_name=False)
+wl.draw.plot_stego_visualization(results, "draw_ALL/MVC")
+wl.draw.plot_attack_visualization(results, "draw_ALL/MVC")

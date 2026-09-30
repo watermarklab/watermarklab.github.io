@@ -1,0 +1,49 @@
+from numpy import ndarray
+import watermarklab as wl
+from typing import List, Any
+from watermarklab.utils.data import DataLoader
+from watermarklab.datasets import MS_COCO_2017_VAL_IMAGES
+from watermarklab.utils.basemodel import BaseWatermarkModel, Result
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+
+
+class YourWatermark(BaseWatermarkModel):
+    """Skeleton for a custom watermark model. Implement `embed`, `extract`, `recover`."""
+
+    def __init__(self, bits_len: int, img_size: int, modelname: str):
+        super().__init__(bits_len, img_size, modelname)
+
+    def embed(self, cover_list: List[Any], secrets: List[Any]) -> Result:
+        """Embed watermark into cover data."""
+        pass  # Replace with your logic
+
+    def extract(self, stego_list: List[ndarray]) -> Result:
+        """Extract watermark from stego data."""
+        pass  # Replace with your logic
+
+    def recover(self, stego_list: List[ndarray]) -> Result:
+        """Recover original cover data (for reversible watermarking)."""
+        pass  # Replace with your logic or handle if not applicable
+
+
+# --- Set Up Evaluation ---
+default_attackers = AttackersWithFactorsModel()  # Default set of attackers
+
+# Instantiate your model (replace `your_payload` and `your_img_size`)
+your_payload = 100
+your_img_size = 400
+stegastamp = YourWatermark(bits_len=your_payload, img_size=your_img_size, modelname="YourModelName")
+
+# Load dataset: MS COCO 2017 validation images
+kodak24_400_100 = MS_COCO_2017_VAL_IMAGES(im_size=your_img_size, bit_len=your_payload, image_num=500)
+# Create DataLoader for batched processing
+dataloader_400_100 = DataLoader(kodak24_400_100, batch_size=64)
+
+
+# --- Run Evaluation ---
+# Evaluate your model
+wl.evaluate("save_results/PGWs", stegastamp, default_attackers, dataloader_400_100)
+
+# --- Visualize Results (Optional) ---
+# Plot robustness results
+wl.draw.plot_model_robustness_under_single_attack([f"save_results/PGWs/{stegastamp.modelname}"], "save_draw")

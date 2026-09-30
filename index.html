@@ -1,257 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WatermarkLab — Robust Image Watermarking Benchmark</title>
-  <link rel="icon" href="../assets/logo.svg">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WatermarkLab — Robust Image Watermarking Toolkit</title>
+<meta name="description" content="WatermarkLab is a toolkit for robust image watermarking benchmarking and development: evaluation pipelines, 40+ attacks, watermark models and metrics.">
+<style>
+*{box-sizing:border-box}
+:root{
+  --ink:#e9eef7; --dim:#8fa0bb; --line:rgba(120,150,200,.16);
+  --cyan:#22d3ee; --violet:#a855f7; --red:#ff4d5e; --blue:#4d7cff;
+}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:#05070d; color:var(--ink); overflow-x:hidden;
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit; text-decoration:none}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+.bg{position:fixed; inset:0; z-index:0; pointer-events:none}
+.bg .glow1,.bg .glow2,.bg .glow3{position:absolute; border-radius:50%; filter:blur(90px); opacity:.5}
+.bg .glow1{width:640px;height:640px;left:-190px;top:-220px;background:radial-gradient(circle,#1e5cff,transparent 66%);animation:drift1 22s ease-in-out infinite}
+.bg .glow2{width:560px;height:560px;right:-160px;top:60px;background:radial-gradient(circle,#a855f7,transparent 66%);animation:drift2 27s ease-in-out infinite}
+.bg .glow3{width:520px;height:520px;left:38%;bottom:-260px;background:radial-gradient(circle,#0ea5b7,transparent 66%);animation:drift3 31s ease-in-out infinite}
+@keyframes drift1{50%{transform:translate3d(70px,60px,0) scale(1.09)}}
+@keyframes drift2{50%{transform:translate3d(-80px,50px,0) scale(1.13)}}
+@keyframes drift3{50%{transform:translate3d(50px,-70px,0) scale(1.07)}}
+.bg .grid{
+  position:absolute; inset:0;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:62px 62px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 62% at 50% 34%,#000 32%,transparent 76%);
+  mask-image:radial-gradient(ellipse 90% 62% at 50% 34%,#000 32%,transparent 76%);
+}
+.wrap{position:relative; z-index:1}
+header.lnav{
+  position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:20px;
+  padding:0 30px; height:64px; backdrop-filter:blur(14px);
+  background:rgba(5,7,13,.72); border-bottom:1px solid var(--line);
+}
+header.lnav .brand{display:flex; align-items:center; gap:10px; font-weight:650; letter-spacing:.2px}
+header.lnav .brand img{width:26px;height:31px}
+header.lnav nav{margin-left:auto; display:flex; align-items:center; gap:2px}
+header.lnav nav a{padding:8px 13px; border-radius:9px; font-size:14px; color:var(--dim); white-space:nowrap}
+header.lnav nav a:hover{color:var(--ink); background:rgba(255,255,255,.055)}
+header.lnav nav a.hot{
+  color:#04121a; font-weight:650; margin-left:8px;
+  background:linear-gradient(135deg,var(--cyan),#7dd3fc); box-shadow:0 0 22px rgba(34,211,238,.34);
+}
+.hero{
+  min-height:calc(100vh - 64px); display:grid; grid-template-columns:minmax(0,470px) minmax(0,1fr);
+  align-items:center; gap:40px; padding:56px 60px 70px; max-width:1400px; margin:0 auto;
+}
+.stage{position:relative; display:flex; align-items:center; justify-content:center}
+.stage canvas{display:block; width:100%; max-width:440px; height:auto; cursor:crosshair}
+.stage .halo{
+  position:absolute; width:430px; height:430px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle,rgba(34,211,238,.16),transparent 62%); filter:blur(28px);
+}
+.stage .hint{display:none}
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--cyan); border:1px solid rgba(34,211,238,.3);
+  border-radius:999px; padding:5px 13px; background:rgba(34,211,238,.07); margin-bottom:20px;
+}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1.title{
+  margin:0 0 16px; font-size:clamp(38px,5.4vw,66px); line-height:1.03; letter-spacing:-1.6px; font-weight:760;
+  background:linear-gradient(112deg,#ffffff 12%,#9fd8ff 44%,#c4a2ff 78%,#ffffff 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.lede{font-size:17.5px; color:var(--dim); max-width:620px; margin:0 0 26px}
+.lede b{color:#dbe6f7; font-weight:600}
+.cta{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:22px}
+.btn{
+  display:inline-flex; align-items:center; gap:9px; padding:13px 25px; border-radius:11px;
+  font-weight:640; font-size:15px; border:1px solid transparent; transition:transform .15s ease,box-shadow .15s ease;
+}
+.btn:hover{transform:translateY(-2px); text-decoration:none}
+.btn.pri{background:linear-gradient(135deg,var(--cyan),#6366f1); color:#04121a; box-shadow:0 10px 34px rgba(34,211,238,.3)}
+.btn.pri:hover{box-shadow:0 14px 42px rgba(34,211,238,.44)}
+.btn.gho{border-color:var(--line); color:var(--ink); background:rgba(255,255,255,.035)}
+.btn.gho:hover{border-color:rgba(34,211,238,.5); background:rgba(34,211,238,.08)}
+.install{
+  display:inline-flex; align-items:center; gap:12px; font-size:14px; color:#bcd0ea;
+  background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:10px; padding:10px 15px;
+}
+.install .p{color:var(--cyan)}
+section.band{padding:78px 60px; max-width:1400px; margin:0 auto}
+h2.sec{font-size:clamp(26px,3.2vw,36px); letter-spacing:-.8px; margin:0 0 10px; font-weight:720}
+p.secsub{color:var(--dim); margin:0 0 34px; max-width:640px}
+.feats{display:grid; grid-template-columns:repeat(auto-fit,minmax(268px,1fr)); gap:16px}
+.feat{
+  position:relative; padding:22px 22px 24px; border-radius:15px; overflow:hidden;
+  background:linear-gradient(158deg,rgba(255,255,255,.062),rgba(255,255,255,.018));
+  border:1px solid var(--line); transition:transform .18s ease,border-color .18s ease;
+}
+.feat::after{
+  content:""; position:absolute; inset:0; opacity:0; transition:opacity .2s ease;
+  background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),rgba(34,211,238,.13),transparent 62%);
+}
+.feat:hover{transform:translateY(-4px); border-color:rgba(34,211,238,.42)}
+.feat:hover::after{opacity:1}
+.feat .ic{
+  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;margin-bottom:13px;
+  background:rgba(34,211,238,.12); border:1px solid rgba(34,211,238,.26); color:var(--cyan); font-size:17px;
+}
+.feat h3{margin:0 0 7px; font-size:16.5px; font-weight:650}
+.feat p{margin:0; color:var(--dim); font-size:14px}
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:16px; margin-top:14px}
+.stat{padding:20px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.03)}
+.stat b{display:block; font-size:32px; letter-spacing:-1px; background:linear-gradient(120deg,#fff,#7dd3fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.stat span{color:var(--dim); font-size:13px}
+.mods{display:grid; grid-template-columns:repeat(auto-fit,minmax(252px,1fr)); gap:14px}
+.mod{
+  display:block; padding:19px 20px; border-radius:14px; border:1px solid var(--line);
+  background:rgba(255,255,255,.032); transition:transform .16s ease,border-color .16s ease,background .16s ease;
+}
+.mod:hover{transform:translateY(-3px); border-color:var(--c,var(--violet)); background:rgba(255,255,255,.06); text-decoration:none}
+.mod code{color:var(--c,var(--cyan)); font-size:14.5px; font-weight:650}
+.mod p{margin:7px 0 0; color:var(--dim); font-size:13.5px}
+.mod .c{float:right; color:var(--dim); font-size:12px}
+.mod:hover .c{color:var(--c,var(--cyan))}
 
-    body {
-      background: #05050f;
-      color: #e0e0ff;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.7;
-      padding: 40px 20px;
-      background-image:
-        radial-gradient(circle at 10% 20%, rgba(60, 0, 255, 0.1) 0%, transparent 20%),
-        radial-gradient(circle at 90% 80%, rgba(0, 200, 255, 0.1) 0%, transparent 20%);
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      text-align: center;
-      padding: 60px 0 40px;
-    }
-
-    h1 {
-      font-size: 3.5rem;
-      background: linear-gradient(135deg, #ff00cc, #3333ff, #00d4ff);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      font-weight: 900;
-      letter-spacing: -1px;
-      text-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
-      animation: glow 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes glow {
-      0% { text-shadow: 0 0 10px rgba(255, 0, 204, 0.5), 0 0 20px rgba(255, 0, 204, 0.3); }
-      100% { text-shadow: 0 0 20px rgba(0, 200, 255, 0.7), 0 0 40px rgba(0, 200, 255, 0.4); }
-    }
-
-    .subtitle {
-      font-size: 1.3rem;
-      color: #a0a0ff;
-      max-width: 800px;
-      margin: 0 auto;
-      margin-top: 15px;
-      font-weight: 300;
-    }
-
-    .content {
-      background: rgba(15, 15, 40, 0.7);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      padding: 40px;
-      margin: 40px auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
-                  inset 0 0 20px rgba(100, 100, 255, 0.1);
-      border: 1px solid rgba(100, 100, 255, 0.2);
-    }
-
-    h2 {
-      font-size: 2rem;
-      margin: 30px 0 20px;
-      color: #8080ff;
-      position: relative;
-      display: inline-block;
-    }
-
-    h2::after {
-      content: '';
-      position: absolute;
-      bottom: -8px;
-      left: 0;
-      width: 60px;
-      height: 3px;
-      background: linear-gradient(90deg, #ff00cc, #00d4ff);
-      border-radius: 2px;
-    }
-
-    p {
-      margin-bottom: 20px;
-      font-size: 1.1rem;
-      text-align: justify;
-    }
-
-    .highlight {
-      color: #ff66ff;
-      font-weight: 600;
-    }
-
-    .stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px;
-      margin: 40px 0;
-      justify-content: center;
-    }
-
-    .stat-box {
-      background: rgba(30, 30, 70, 0.8);
-      padding: 25px;
-      border-radius: 15px;
-      text-align: center;
-      min-width: 150px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(150, 150, 255, 0.2);
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .stat-box:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(100, 100, 255, 0.4);
-    }
-
-    .stat-number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #00d4ff, #ff00cc);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .stat-label {
-      font-size: 0.95rem;
-      color: #b0b0ff;
-      margin-top: 8px;
-    }
-
-    footer {
-      text-align: center;
-      margin-top: 60px;
-      padding: 30px;
-      color: #888;
-      font-size: 0.95rem;
-      border-top: 1px solid rgba(100, 100, 255, 0.2);
-    }
-
-    .visit-btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 30px;
-      background: linear-gradient(135deg, #6a11cb, #2575fc);
-      color: white;
-      text-decoration: none;
-      border-radius: 50px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
-      transition: all 0.3s;
-    }
-
-    .visit-btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(37, 117, 252, 0.6);
-    }
-
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 2.5rem;
-      }
-      .content {
-        padding: 25px;
-      }
-      .stats {
-        gap: 15px;
-      }
-      .stat-box {
-        min-width: 120px;
-        padding: 20px 10px;
-      }
-      .stat-number {
-        font-size: 2rem;
-      }
-    }
-  </style>
+/* ---------- benchmark podium ---------- */
+.podium{display:grid; grid-template-columns:repeat(auto-fit,minmax(228px,1fr)); gap:16px}
+.pcard{
+  position:relative; padding:24px 22px; border-radius:16px; text-align:center; overflow:hidden;
+  border:1px solid var(--line); background:rgba(255,255,255,.035);
+  transition:transform .2s ease, border-color .2s ease;
+}
+.pcard:hover{transform:translateY(-4px)}
+.pcard .medal{font-size:34px; line-height:1; margin-bottom:10px}
+.pcard h4{margin:0 0 4px; font-size:17px}
+.pcard .ptag{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:8px}
+.pcard p{margin:0; color:var(--dim); font-size:13.5px}
+.pcard.gold{border-color:rgba(255,215,0,.45); background:linear-gradient(160deg,rgba(255,215,0,.10),transparent 70%)}
+.pcard.silver{border-color:rgba(192,192,192,.42); background:linear-gradient(160deg,rgba(192,192,192,.10),transparent 70%)}
+.pcard.bronze{border-color:rgba(205,127,50,.45); background:linear-gradient(160deg,rgba(205,127,50,.10),transparent 70%)}
+.findings{margin:22px 0 0; padding-left:0; list-style:none; display:grid; gap:10px}
+.findings li{
+  position:relative; padding:12px 16px 12px 40px; border-radius:11px; font-size:14px; color:var(--dim);
+  border:1px solid var(--line); background:rgba(255,255,255,.028);
+}
+.findings li::before{content:"\2192"; position:absolute; left:16px; top:12px; color:var(--cyan); font-weight:700}
+.final{
+  max-width:1180px; margin:20px auto 90px; padding:56px 44px; border-radius:22px; text-align:center;
+  border:1px solid var(--line); background:linear-gradient(150deg,rgba(34,211,238,.11),rgba(168,85,247,.11));
+}
+.final h2{margin:0 0 12px; font-size:clamp(24px,3vw,34px); letter-spacing:-.7px}
+.final p{color:var(--dim); margin:0 auto 26px; max-width:560px}
+footer.lfoot{
+  border-top:1px solid var(--line); padding:30px 60px; color:var(--dim); font-size:13.5px;
+  display:flex; flex-wrap:wrap; gap:18px; align-items:center; justify-content:center; text-align:center;
+}
+footer.lfoot nav{display:flex; flex-wrap:wrap; gap:18px; justify-content:center}
+footer.lfoot a:hover{color:var(--cyan)}
+.reveal{opacity:0; transform:translateY(22px); transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1; transform:none}
+@media (max-width:1000px){
+  .hero{grid-template-columns:1fr; padding:34px 24px 60px; text-align:center}
+  .stage{order:-1}
+  .cta,.install{justify-content:center}
+  .lede{margin-left:auto;margin-right:auto}
+  section.band{padding:56px 24px}
+  .final{margin:10px 24px 70px; padding:40px 22px}
+  footer.lfoot{padding:26px 24px}
+  header.lnav{padding:0 16px}
+  header.lnav nav a{padding:8px 9px; font-size:13px}
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>WATERMARKLAB</h1>
-      <p class="subtitle">A Comprehensive Framework for Systematic Benchmarking & Development of Robust Image Watermarks</p>
-    </header>
+<div class="bg"><div class="glow1"></div><div class="glow2"></div><div class="glow3"></div><div class="grid"></div></div><div class="wrap"><header class="lnav"><a class="brand" href="index.html"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iX+WbvuWxgl8xIiBkYXRhLW5hbWU9IuWbvuWxgiAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMTAxLjMyIDEyMC4zMyI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgc3Ryb2tlOiByZWQ7CiAgICAgIH0KCiAgICAgIC5jbHMtMSwgLmNscy0yLCAuY2xzLTMgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgIH0KCiAgICAgIC5jbHMtMSwgLmNscy0zIHsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogODsKICAgICAgICBzdHJva2Utd2lkdGg6IDhweDsKICAgICAgfQoKICAgICAgLmNscy00IHsKICAgICAgICBmaWxsOiAjMDAwOwogICAgICAgIGZvbnQtZmFtaWx5OiBTVFhpaGVpLCBTVFhpaGVpOwogICAgICAgIGZvbnQtc2l6ZTogMTE3cHg7CiAgICAgICAgaXNvbGF0aW9uOiBpc29sYXRlOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIHN0cm9rZS13aWR0aDogMHB4OwogICAgICB9CgogICAgICAuY2xzLTMgewogICAgICAgIHN0cm9rZTogYmx1ZTsKICAgICAgfQoKICAgICAgLmNscy01IHsKICAgICAgICBjbGlwLXBhdGg6IHVybCgjY2xpcHBhdGgpOwogICAgICB9CiAgICA8L3N0eWxlPgogICAgPGNsaXBQYXRoIGlkPSJjbGlwcGF0aCI+CiAgICAgIDxyZWN0IGNsYXNzPSJjbHMtMiIgd2lkdGg9IjEwMS4zMiIgaGVpZ2h0PSIxMjAuMzMiLz4KICAgIDwvY2xpcFBhdGg+CiAgPC9kZWZzPgogIDxnIGNsYXNzPSJjbHMtNSI+CiAgICA8dGV4dCBjbGFzcz0iY2xzLTQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC01LjUgMTE4LjIyKSI+PHRzcGFuIHg9IjAiIHk9IjAiPlc8L3RzcGFuPjwvdGV4dD4KICAgIDxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTUwLjU5LDB2MTE5LjMzIi8+CiAgICA8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik0zNS42Miw4NS4yMmgyOS45NSIvPgogIDwvZz4KPC9zdmc+" alt="WatermarkLab logo"><span>WatermarkLab</span></a><nav><a href="pages/api-document.html">API Docs</a><a href="pages/api-document.html#introduction">Getting Started</a><a href="pages/paper.html">Paper</a><a href="pages/license.html">License</a><a href="https://github.com/watermarklab/watermarklab.github.io">GitHub</a><a class="hot" href="pages/api-document.html">Get Started &rarr;</a></nav></header><section class="hero"><div class="stage"><div class="halo"></div><canvas id="logoCanvas" width="440" height="522" aria-label="WatermarkLab logo particle animation"></canvas></div><div><div class="eyebrow"><i></i>Comprehensive &middot; Fair &middot; Open &middot; Extensible</div><h1 class="title">Benchmark blind robust<br>image watermarking.</h1><p class="lede">WatermarkLab is a framework for benchmarking <b>all types of blind robust image watermarks</b> — zero-bit and multi-bit, post-generation and in-generation, including robust reversible methods — and for developing new ones.</p><div class="cta"><a class="btn pri" href="pages/api-document.html">Get Started &rarr;</a><a class="btn gho" href="pages/api-document.html#quick-start">Read the guide</a></div><div class="install"><span class="p">$</span><code>pip install watermarklab</code></div></div></section><section class="band"><h2 class="sec">Everything a robustness study needs</h2><p class="secsub">From a single call to a full benchmark report — without wiring the parts together yourself.</p><div class="feats"><div class="feat reveal"><div class="ic">&#9673;</div><h3>One evaluation pipeline</h3><p>A single <code>wl.evaluate()</code> call runs embedding, visual-quality measurement, the benchmark attack sweep, extraction and scoring — for both PGW and IGW models.</p></div><div class="feat reveal"><div class="ic">&#9881;</div><h3>34 benchmark attacks, 6 categories</h3><p>Colour, noise, learned &amp; non-learned compression, filtering, geometric distortion and diffusion regeneration, each swept over calibrated strengths.</p></div><div class="feat reveal"><div class="ic">&#9636;</div><h3>28 differentiable attackers</h3><p>DiffAttacker layers — differentiable JPEG (mask / polynomial / Fourier), Gaussian noise, colour and geometric transforms, screen-capture PIMoG and print-capture StegaStamp — for adversarial training.</p></div><div class="feat reveal"><div class="ic">&#9788;</div><h3>10 reference watermark models</h3><p>Seven post-generation (DctDwt, DctDwtSvd, RivaGAN, StegaStamp, TrustMark, InvisMark, VINE) and three in-generation (Tree-Ring, GaussianShading, StableSignature).</p></div><div class="feat reveal"><div class="ic">&#9635;</div><h3>Robust reversible support</h3><p>Arithmetic coding and reversible data hiding utilities, for methods that must also recover the original cover image losslessly.</p></div><div class="feat reveal"><div class="ic">&#9638;</div><h3>Fair, reproducible reporting</h3><p>Standardised metrics — BER, EA, TPR@x%FPR and RQ-AUC for robustness, PSNR, SSIM, LPIPS and FID for quality — written to one JSON report per model.</p></div></div></section><section class="band"><h2 class="sec">The framework at a glance</h2><p class="secsub">The paper’s seven core modules plus the steganography module the library also ships. Symbols and signatures are generated from the source tree by static AST analysis.</p><div class="stats"><div class="stat reveal"><b>8</b><span>modules</span></div><div class="stat reveal"><b>10</b><span>reference watermark models</span></div><div class="stat reveal"><b>34</b><span>benchmark attacks</span></div><div class="stat reveal"><b>28</b><span>differentiable attackers</span></div><div class="stat reveal"><b>6</b><span>attack categories</span></div><div class="stat reveal"><b>8</b><span>evaluation metrics</span></div></div></section><section class="band"><h2 class="sec">What the benchmark finds</h2><p class="secsub">Nine methods, 34 attacks, ranked by cumulative RQ-AUC. The strongest post-generation method is still StegaStamp; in-generation methods lead overall.</p><div class="podium"><div class="pcard gold reveal"><div class="medal">🥇</div><h4>GaussianShading</h4><div class="ptag">IGW</div><p>Best overall. Only five attacks reach TPR@0.1%FPR = 0.8 against it.</p></div><div class="pcard silver reveal"><div class="medal">🥈</div><h4>StegaStamp</h4><div class="ptag">PGW</div><p>Strongest post-generation method; weakest under flipping and rotation.</p></div><div class="pcard bronze reveal"><div class="medal">🥉</div><h4>VINE</h4><div class="ptag">PGW</div><p>Sensitive to cropping — a 10% crop drops TPR@0.1%FPR to 0.01.</p></div></div><ul class="findings"><li>In-generation methods win overall: mapping the watermark into the latent distribution makes it more evenly spread through the image than a post-hoc perturbation can achieve.</li><li>Geometric and regeneration attacks are the strongest categories — most current methods remain insufficiently robust against them.</li><li>GaussianShading and VINE are notably weak under geometric attacks; TrustMark ranks behind StegaStamp under rotation, flipping and regeneration.</li><li>Among post-generation methods, TrustMark and InvisMark achieve the highest visual quality, while RivaGAN and DctDwtSvd introduce visible colour shifts.</li></ul><p class="secsub" style="margin-top:18px"><a class="btn gho" href="pages/paper.html">Read the paper &rarr;</a></p></section><section class="band"><h2 class="sec">Core modules</h2><p class="secsub">The paper’s seven core modules, plus the <code>steganography</code> module the library also ships — jump straight into any part of the API reference.</p><div class="mods"><a class="mod reveal" href="pages/api-document.html#cat-watermarks" style="--c:#7c3aed"><span class="c">&rarr;</span><code>watermarks</code><p>Ten reference methods for comparative studies — seven post-generation and three in-generation.</p></a><a class="mod reveal" href="pages/api-document.html#cat-attackers" style="--c:#ea580c"><span class="c">&rarr;</span><code>attackers</code><p>TestAttacker for benchmarking robustness, and differentiable DiffAttacker for adversarial training and the development of new methods. The default <code>AttackersWithFactorsModel()</code> ships 44 attack configurations; the paper's benchmark evaluates 34 of them.</p></a><a class="mod reveal" href="pages/api-document.html#cat-metrics" style="--c:#0d9488"><span class="c">&rarr;</span><code>metrics</code><p>Robustness metrics (BER, EA, TPR@x%FPR) and imperceptibility metrics (PSNR, SSIM, LPIPS, FID), plus a base class for custom metrics.</p></a><a class="mod reveal" href="pages/api-document.html#cat-tools" style="--c:#db2777"><span class="c">&rarr;</span><code>tools</code><p>Auxiliary utilities such as compression coding and reversible data hiding, supporting the development of robust reversible watermarking.</p></a><a class="mod reveal" href="pages/api-document.html#cat-datasets" style="--c:#0891b2"><span class="c">&rarr;</span><code>datasets</code><p>Mainstream benchmarks — MS-COCO 2017 images and captions, Kodak24 and USC-SIPI — with the batched loader that pairs data with watermark bits.</p></a><a class="mod reveal" href="pages/api-document.html#cat-laboratories" style="--c:#2563eb"><span class="c">&rarr;</span><code>laboratories</code><p>The evaluation platform for PGW and IGW methods, together with the base interfaces you implement to plug in your own model, attacker or metric.</p></a><a class="mod reveal" href="pages/api-document.html#cat-draw" style="--c:#65a30d"><span class="c">&rarr;</span><code>draw</code><p>Visualization and interactive analysis: robustness curves, model and attacker rankings, visual-quality plots and stego / attack comparisons.</p></a><a class="mod reveal" href="pages/api-document.html#cat-steganography" style="--c:#0284c7"><span class="c">&rarr;</span><code>steganography</code><p>iSteganoGAN, an improved SteganoGAN model that uses L-BFGS for more accurate and stable watermark extraction. It ships with the library and subclasses <code>BaseWatermarkModel</code>, but is not one of the seven modules enumerated in the paper.</p></a></div></section><div class="final reveal"><h2>Start benchmarking in three lines</h2><p>Instantiate a model, wrap the default attackers, and call <code>wl.evaluate()</code>. The API reference has the full signatures for every class and method.</p><div class="cta" style="justify-content:center"><a class="btn pri" href="pages/api-document.html">Get Started &rarr;</a><a class="btn gho" href="pages/api-document.html#eval-watermark">Evaluate your watermark</a></div></div><footer class="lfoot"><div>WatermarkLab 0.1.22 &middot; MIT License with Additional Terms</div><nav><a href="pages/api-document.html">API Docs</a><a href="pages/api-document.html#introduction">Getting Started</a><a href="https://github.com/watermarklab/watermarklab.github.io">GitHub</a><a href="https://pypi.org/project/watermarklab/">PyPI</a><a href="pages/license.html">License</a></nav></footer></div>
+<script>var LOGO_DATA_URI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iX+WbvuWxgl8xIiBkYXRhLW5hbWU9IuWbvuWxgiAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMTAxLjMyIDEyMC4zMyI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgc3Ryb2tlOiByZWQ7CiAgICAgIH0KCiAgICAgIC5jbHMtMSwgLmNscy0yLCAuY2xzLTMgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgIH0KCiAgICAgIC5jbHMtMSwgLmNscy0zIHsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogODsKICAgICAgICBzdHJva2Utd2lkdGg6IDhweDsKICAgICAgfQoKICAgICAgLmNscy00IHsKICAgICAgICBmaWxsOiAjMDAwOwogICAgICAgIGZvbnQtZmFtaWx5OiBTVFhpaGVpLCBTVFhpaGVpOwogICAgICAgIGZvbnQtc2l6ZTogMTE3cHg7CiAgICAgICAgaXNvbGF0aW9uOiBpc29sYXRlOwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIHN0cm9rZS13aWR0aDogMHB4OwogICAgICB9CgogICAgICAuY2xzLTMgewogICAgICAgIHN0cm9rZTogYmx1ZTsKICAgICAgfQoKICAgICAgLmNscy01IHsKICAgICAgICBjbGlwLXBhdGg6IHVybCgjY2xpcHBhdGgpOwogICAgICB9CiAgICA8L3N0eWxlPgogICAgPGNsaXBQYXRoIGlkPSJjbGlwcGF0aCI+CiAgICAgIDxyZWN0IGNsYXNzPSJjbHMtMiIgd2lkdGg9IjEwMS4zMiIgaGVpZ2h0PSIxMjAuMzMiLz4KICAgIDwvY2xpcFBhdGg+CiAgPC9kZWZzPgogIDxnIGNsYXNzPSJjbHMtNSI+CiAgICA8dGV4dCBjbGFzcz0iY2xzLTQiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC01LjUgMTE4LjIyKSI+PHRzcGFuIHg9IjAiIHk9IjAiPlc8L3RzcGFuPjwvdGV4dD4KICAgIDxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTUwLjU5LDB2MTE5LjMzIi8+CiAgICA8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik0zNS42Miw4NS4yMmgyOS45NSIvPgogIDwvZz4KPC9zdmc+';
 
-    <div class="content">
-      <p>
-        With the growing demand for multimedia content, image protection has become increasingly important. Robust image watermarking, as a core technology for copyright protection, has attracted extensive attention.
-      </p>
+(function(){
+  var canvas = document.getElementById('logoCanvas');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d', {alpha:true});
+  var img = new Image();
+  var particles = [];
+  var W = 440, H = 440 * 120.33 / 101.32;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var mouse = {x:-9999, y:-9999, on:false};
+  var t0 = Date.now();
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      <h2>🌟 What is WatermarkLab?</h2>
-      <p>
-        We propose <span class="highlight">WatermarkLab</span>, a powerful framework aiming to establish a comprehensive, fair, and interactive platform for blind robust image watermark benchmarking and development.
-      </p>
+  canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
 
-      <h2>⚡ Key Features</h2>
-      <p>
-        WatermarkLab supports benchmark evaluation of all types of blind robust image watermarks — including <span class="highlight">in-generation</span> and <span class="highlight">post-generation</span> watermarks.
-      </p>
+  function fit(){
+    var maxW = Math.min(440, document.querySelector('.stage').clientWidth || 440);
+    var s = maxW / W;
+    canvas.style.width = (W*s)+'px';
+    canvas.style.height = (H*s)+'px';
+  }
 
-      <div class="stats">
-        <div class="stat-box">
-          <div class="stat-number">10</div>
-          <div class="stat-label">Watermark Methods</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number">34</div>
-          <div class="stat-label">Attackers (Benchmark)</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number">28</div>
-          <div class="stat-label">Differentiable Attackers</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number">9</div>
-          <div class="stat-label">Methods Evaluated</div>
-        </div>
-      </div>
+  function build(pts){
+    var scale = (W*dpr) / 101.32;
+    var targets = pts.map(function(p){
+      return {tx:p.x*scale, ty:p.y*scale, col:p.col};
+    });
+    // thin out if very dense, so the animation stays smooth
+    var max = 2600;
+    if(targets.length > max){
+      var step = targets.length/max; var keep=[];
+      for(var i=0;i<targets.length;i+=step) keep.push(targets[Math.floor(i)]);
+      targets = keep;
+    }
+    particles = targets.map(function(t){
+      // Start near the target so the logo silhouette is legible from the very
+      // first frame, then let the spring settle it into place.
+      var a = Math.random()*Math.PI*2;
+      var rad = Math.random()*Math.random()*150*dpr;
+      return {
+        x: t.tx + Math.cos(a)*rad, y: t.ty + Math.sin(a)*rad,
+        vx:0, vy:0, tx:t.tx, ty:t.ty, col:t.col,
+        r: (0.65 + Math.random()*0.75) * dpr,
+        ph: Math.random()*Math.PI*2
+      };
+    });
+  }
 
-      <p>
-        Beyond benchmarking, WatermarkLab integrates <span class="highlight">10 representative watermarking methods</span> for systematic comparison. It also includes <span class="highlight">34 attackers</span> for benchmarking and <span class="highlight">28 differentiable attackers</span> for development.
-      </p>
+  function sampleLogo(){
+    var off = document.createElement('canvas');
+    var OW = 254, OH = Math.round(254 * 120.33 / 101.32);
+    off.width = OW; off.height = OH;
+    var o = off.getContext('2d');
+    o.drawImage(img, 0, 0, OW, OH);
+    var data;
+    try{ data = o.getImageData(0,0,OW,OH).data; }
+    catch(err){ return null; }
+    var pts = [], step = 2;
+    for(var y=0;y<OH;y+=step){
+      for(var x=0;x<OW;x+=step){
+        var i = (y*OW+x)*4;
+        if(data[i+3] < 120) continue;
+        var r=data[i], g=data[i+1], b=data[i+2];
+        var col;
+        if(r>120 && r>g+55 && r>b+55) col='#ff5566';
+        else if(b>110 && b>r+45 && b>g+35) col='#5b8cff';
+        else col='#9fe8ff';
+        pts.push({x:x*(101.32/OW), y:y*(120.33/OH), col:col});
+      }
+    }
+    return pts;
+  }
 
-      <p>
-        We evaluate the robustness of 9 watermarking methods under 34 attackers and identify their weaknesses — assisting researchers in enhancing robustness and designing new watermark removal attackers.
-      </p>
+  function fallback(){
+    // Canvas could not be read (tainted); show the logo itself so the hero is never empty.
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
 
-      <h2>🛠️ Tools & Visualization</h2>
-      <p>
-        The framework provides auxiliary tools such as <span class="highlight">arithmetic coding</span> and <span class="highlight">reversible data hiding</span> techniques. For result visualization, WatermarkLab offers comprehensive tools and an interactive website — enabling intuitive analysis and comparison.
-      </p>
+  function step(){
+    var now = Date.now();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.globalCompositeOperation = 'lighter';
 
-      <div style="text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-        <a href="../pages/navigation.html" class="visit-btn">VISIT INTERACTIVE WEBSITE</a>
-        <a href="../pages/api-reference.html" class="visit-btn">API REFERENCE</a>
-        <a href="../pages/paper.html" class="visit-btn">PAPER</a>
-      </div>
-    </div>
+    for(var i=0;i<particles.length;i++){
+      var p = particles[i];
+      var jx = Math.cos(now*0.0011 + p.ph) * 1.4 * dpr;
+      var jy = Math.sin(now*0.0014 + p.ph) * 1.4 * dpr;
+      if(!reduce){
+        p.vx += (p.tx + jx - p.x) * 0.085;
+        p.vy += (p.ty + jy - p.y) * 0.085;
+      } else {
+        p.x = p.tx; p.y = p.ty;
+      }
+      if(mouse.on){
+        var dx = p.x - mouse.x, dy = p.y - mouse.y;
+        var d2 = dx*dx + dy*dy;
+        var R = 74*dpr;
+        if(d2 < R*R && d2 > 0.01){
+          var d = Math.sqrt(d2);
+          var f = (1 - d/R);
+          p.vx += (dx/d) * f * 7.5;
+          p.vy += (dy/d) * f * 7.5;
+        }
+      }
+      p.vx *= 0.862; p.vy *= 0.862;
+      p.x += p.vx; p.y += p.vy;
 
-    <footer>
-      &copy; 2025 WatermarkLab — Advancing the Future of Digital Image Protection
-    </footer>
-  </div>
+      var speed = Math.abs(p.vx) + Math.abs(p.vy);
+      ctx.globalAlpha = Math.min(0.96, 0.5 + speed*0.06);
+      ctx.fillStyle = p.col;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(step);
+  }
+
+  function pointer(e){
+    var r = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    if(!t){ return; }
+    mouse.x = (t.clientX - r.left) * (canvas.width / r.width);
+    mouse.y = (t.clientY - r.top) * (canvas.height / r.height);
+    mouse.on = true;
+  }
+  canvas.addEventListener('mousemove', pointer);
+  canvas.addEventListener('touchmove', function(e){ pointer(e); e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('mouseleave', function(){ mouse.on = false; mouse.x = mouse.y = -9999; });
+  canvas.addEventListener('touchend', function(){ mouse.on = false; });
+  canvas.addEventListener('click', function(){
+    for(var i=0;i<particles.length;i++){
+      var p = particles[i];
+      var dx = p.x - mouse.x, dy = p.y - mouse.y;
+      var d = Math.sqrt(dx*dx+dy*dy) || 1;
+      var f = Math.max(0, 1 - d/(210*dpr));
+      p.vx += (dx/d)*f*26; p.vy += (dy/d)*f*26;
+    }
+  });
+
+  img.onload = function(){
+    var pts = sampleLogo();
+    if(!pts || !pts.length){ fallback(); return; }
+    build(pts);
+    fit();
+    window.addEventListener('resize', fit);
+    requestAnimationFrame(step);
+  };
+  img.onerror = function(){ fallback(); };
+  img.src = LOGO_DATA_URI;
+})();
+
+(function(){
+  document.querySelectorAll('.feat').forEach(function(el){
+    el.addEventListener('mousemove', function(e){
+      var r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX-r.left)+'px');
+      el.style.setProperty('--my', (e.clientY-r.top)+'px');
+    });
+  });
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, {rootMargin:'-60px'});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+})();
+</script>
 </body>
 </html>

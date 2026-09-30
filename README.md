@@ -1,61 +1,26 @@
+﻿# watermarklab.github.io
 
-### 其他文件
+Documentation site for **WatermarkLab**, served by GitHub Pages at
+<https://watermarklab.github.io/>.
 
-```markdown
-<!-- watermarklab-website/README.md -->
-# WatermarkLab Website
+    index.html               landing page
+    404.html                 not-found page
+    pages/api-document.html  quick start, guides and the full API reference
+    pages/paper.html         paper summary, attacker table, metrics, results, BibTeX
+    pages/license.html       licence text
+    _build/                  the generator that produces the HTML above
 
-A web-based platform for visualizing and comparing watermarking algorithm performance.
+## Regenerating
 
-## Features
+The HTML is generated from the library source by static AST analysis:
 
-- Interactive model selection with floating card animations
-- Comprehensive visualization of watermarking performance metrics
-- Comparison of PGW (Post-Generation Watermark) and IGW (In-Generation Watermark) models
-- Responsive design with smooth animations
-- Pure static website deployment ready
+    python _build/extract_api.py <path-to>/watermarklab _build/api_dump.json
+    python _build/build_site.py _build/api_dump.json <path-to>/figures/logo.svg . <path-to>/LICENSE
 
-## Project Structure
-watermarklab-website/
-├── index.html # Home page
-├── css/ # Stylesheets
-├── js/ # JavaScript files
-├── pages/ # Additional pages
-├── data/ # Sample data files
-├── assets/ # Images and icons
-├── docs/ # Documentation
-└── config/ # Configuration files
+`_build/README.md` describes every script, and `_build/verify_docs.py` sanity-checks
+the generated pages.
 
+## History
 
-## Deployment
-
-This is a pure static website that can be deployed to:
-- GitHub Pages
-- Vercel
-- Netlify
-- Any static web hosting service
-
-## Technologies Used
-
-- HTML5
-- CSS3 (with animations)
-- JavaScript (ES6+)
-- Plotly.js for data visualization
-- Responsive design principles
-
-## Getting Started
-
-1. Clone the repository
-2. Open `index.html` in a web browser
-3. Or deploy to your preferred static hosting service
-
-## Customization
-
-- Modify `config/site-config.js` for site settings
-- Add new models in `data/models/`
-- Update styles in `css/` directory
-- Extend functionality in `js/` directory
-
-## License
-
-MIT License
+This site replaced an earlier interactive visualisation platform, which remains
+recoverable from git history (see the commit that introduced this README).

@@ -1,0 +1,22 @@
+import watermarklab as wl
+from watermarklab.utils.data import DataLoader
+from watermarklab.datasets import MS_COCO_2017_VAL_PROMPTS
+from watermarklab.attackers.attackerloader import AttackersWithFactorsModel
+from watermarklab.watermarks.IGWs import StableSignature, GaussianShading, TreeRing
+import warnings
+
+
+warnings.filterwarnings('ignore')
+default_attackers = AttackersWithFactorsModel()
+
+gaussianshading = GaussianShading(local_files_only=True)
+mscoco_256 = MS_COCO_2017_VAL_PROMPTS(bit_len=256)
+wl.evaluate("save_results/IGWs/", gaussianshading, default_attackers, DataLoader(mscoco_256, batch_size=128), noise_save=True)
+
+treering = TreeRing(local_files_only=True)
+mscoco_1 = MS_COCO_2017_VAL_PROMPTS(bit_len=1)
+wl.evaluate("save_results/IGWs/", treering, default_attackers, DataLoader(mscoco_1, batch_size=32), noise_save=True)
+
+stablesignature = StableSignature(local_files_only=True)
+mscoco_48 = MS_COCO_2017_VAL_PROMPTS(bit_len=48)
+wl.evaluate("save_results/IGWs/", stablesignature, default_attackers, DataLoader(mscoco_48, batch_size=32), need_cover=True, noise_save=True)
