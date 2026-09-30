@@ -51,7 +51,7 @@ header.lnav nav a.hot{
 }
 .hero{
   min-height:calc(100vh - 64px); display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:22px;
+  align-items:center; justify-content:center; gap:30px;
   padding:36px 24px 56px; max-width:1100px; margin:0 auto; text-align:center;
 }
 .stage{position:relative; display:flex; align-items:center; justify-content:center}
@@ -70,7 +70,10 @@ header.lnav nav a.hot{
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.35}}
 h1.title{
-  margin:0 0 14px; font-size:clamp(34px,4.6vw,56px); line-height:1.05; letter-spacing:-1.4px; font-weight:760;
+  margin:0 0 20px; font-size:clamp(34px,4.6vw,56px); line-height:1.14; letter-spacing:-1.4px; font-weight:760;
+  /* the gradient is painted through background-clip:text, so the box has to be
+     tall enough to contain descenders (the "g" in "image") or they get clipped */
+  padding-bottom:8px;
   background:linear-gradient(112deg,#ffffff 12%,#9fd8ff 44%,#c4a2ff 78%,#ffffff 100%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
@@ -196,7 +199,7 @@ footer.lfoot a:hover{color:var(--cyan)}
     var stageW = (stage && stage.clientWidth) || 400;
     // Also cap by viewport height so the whole hero (logo + headline + buttons)
     // stays inside one screen on shorter displays.
-    var maxW = Math.min(400, stageW, window.innerHeight * 0.42 * (W / H));
+    var maxW = Math.min(400, stageW, window.innerHeight * 0.40 * (W / H));
     var s = maxW / W;
     canvas.style.width = (W*s)+'px';
     canvas.style.height = (H*s)+'px';
