@@ -191,6 +191,32 @@ footer.lfoot a:hover{color:var(--cyan)}
   var t0 = Date.now();
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Palette taken from the mark itself. Kept as RGB triples so glow gradients can
+  // be built from them.
+  var PALETTE = { red:[255,85,102], blue:[91,140,255], accent:[159,232,255] };
+
+  // A soft radial glow, rendered once per colour and then blitted per particle.
+  // Far cheaper than shadowBlur, which would cost a full blur pass per dot.
+  var sprites = {};
+  function glowSprite(rgb){
+    var key = rgb.join(',');
+    if(sprites[key]) return sprites[key];
+    var S = 32;
+    var c = document.createElement('canvas');
+    c.width = S; c.height = S;
+    var g = c.getContext('2d');
+    var grd = g.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+    var rgbStr = rgb.join(',');
+    grd.addColorStop(0.00, 'rgba(' + rgbStr + ',1)');
+    grd.addColorStop(0.22, 'rgba(' + rgbStr + ',0.80)');
+    grd.addColorStop(0.52, 'rgba(' + rgbStr + ',0.24)');
+    grd.addColorStop(1.00, 'rgba(' + rgbStr + ',0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, S, S);
+    sprites[key] = c;
+    return c;
+  }
+
   canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
   canvas.style.width = W+'px'; canvas.style.height = H+'px';
 
@@ -224,9 +250,13 @@ footer.lfoot a:hover{color:var(--cyan)}
       var rad = Math.random()*Math.random()*150*dpr;
       return {
         x: t.tx + Math.cos(a)*rad, y: t.ty + Math.sin(a)*rad,
-        vx:0, vy:0, tx:t.tx, ty:t.ty, col:t.col,
+        vx:0, vy:0, tx:t.tx, ty:t.ty,
+        sprite: glowSprite(t.col),
+        colCss: 'rgb(' + t.col.join(',') + ')',
         r: (0.65 + Math.random()*0.75) * dpr,
-        ph: Math.random()*Math.PI*2
+        glow: (2.2 + Math.random()*1.4) * dpr,
+        ph: Math.random()*Math.PI*2,
+        tw: 0.6 + Math.random()*1.9          // twinkle rate, so they do not pulse in unison
       };
     });
   }
@@ -247,9 +277,9 @@ footer.lfoot a:hover{color:var(--cyan)}
         if(data[i+3] < 120) continue;
         var r=data[i], g=data[i+1], b=data[i+2];
         var col;
-        if(r>120 && r>g+55 && r>b+55) col='#ff5566';
-        else if(b>110 && b>r+45 && b>g+35) col='#5b8cff';
-        else col='#9fe8ff';
+        if(r>120 && r>g+55 && r>b+55) col=PALETTE.red;
+        else if(b>110 && b>r+45 && b>g+35) col=PALETTE.blue;
+        else col=PALETTE.accent;
         pts.push({x:x*(101.32/OW), y:y*(120.33/OH), col:col});
       }
     }
@@ -294,9 +324,19 @@ footer.lfoot a:hover{color:var(--cyan)}
       p.vx *= 0.862; p.vy *= 0.862;
       p.x += p.vx; p.y += p.vy;
 
+      // Brightness breathes over time — each particle has its own rate and phase,
+      // so the mark shimmers instead of pulsing in unison. Motion adds a little.
       var speed = Math.abs(p.vx) + Math.abs(p.vy);
-      ctx.globalAlpha = Math.min(0.96, 0.5 + speed*0.06);
-      ctx.fillStyle = p.col;
+      var twinkle = reduce ? 1 : (0.72 + 0.28 * Math.sin(now * 0.0021 * p.tw + p.ph));
+      var bright = Math.min(1, twinkle * (0.72 + speed * 0.05) + 0.14);
+
+      // Halo first, then a crisp core, so the mark glows without going soft.
+      var gs = p.glow * (0.85 + 0.45 * twinkle);
+      ctx.globalAlpha = bright * 0.34;
+      ctx.drawImage(p.sprite, p.x - gs/2, p.y - gs/2, gs, gs);
+
+      ctx.globalAlpha = Math.min(1, bright + 0.30);
+      ctx.fillStyle = p.colCss;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, 6.2832);
       ctx.fill();
