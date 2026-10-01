@@ -215,6 +215,9 @@ footer.site .fbot{max-width:1180px; margin:20px auto 0; padding-top:16px; border
   color:var(--muted); border-radius:6px; padding:3px 10px; cursor:pointer;
 }
 .codebox .bar button:hover{color:var(--ink); border-color:var(--accent)}
+.codebox .bar button.copied{color:#0d9488; border-color:#0d9488}
+.codebox .bar button.failed{color:#ea580c; border-color:#ea580c}
+.codebox .bar button.copying{opacity:.55}
 .codebox pre{margin:0; border:none; border-radius:0; max-height:620px}
 /* api page: sidebar sits below the sticky top nav */
 .api-shell .sidebar{top:58px; height:calc(100vh - 58px)}
@@ -4725,13 +4728,13 @@ model<span class="t-o">.</span>recover<span class="t-o">(</span>stego_list<span 
     }
   }
 
-  nav.addEventListener('click', function(e){
+  if(nav) nav.addEventListener('click', function(e){
     var link = e.target.closest('.nav-module-link');
     if(link){ link.parentElement.classList.toggle('open'); }
   });
 
   function filter(){
-    var term = (q.value || '').trim().toLowerCase();
+    var term = ((q && q.value) || '').trim().toLowerCase();
     var shown = 0, shownMods = 0;
     navMods.forEach(function(nm){
       var name = nm.getAttribute('data-search') || '';
@@ -4766,29 +4769,41 @@ model<span class="t-o">.</span>recover<span class="t-o">(</span>stego_list<span 
     hint.textContent = term ? (shown + ' module' + (shown===1?'':'s') + ' matched') : (modules.length + ' modules');
   }
 
-  q.addEventListener('input', filter);
-  q.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ q.value=''; filter(); } });
+  if(q){
+    q.addEventListener('input', filter);
+    q.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ q.value=''; filter(); } });
+  }
 
   // keyboard: "/" focuses search
   document.addEventListener('keydown', function(e){
-    if(e.key === '/' && document.activeElement !== q){ e.preventDefault(); q.focus(); }
+    if(e.key === '/' && q && document.activeElement !== q){ e.preventDefault(); q.focus(); }
   });
 
+  // Every element below is optional: this block is shared by templates that do not
+  // all have the same chrome. A null here used to abort the whole script, which
+  // silently disabled the copy buttons further down.
   var top = document.getElementById('totop');
-  window.addEventListener('scroll', function(){
-    top.classList.toggle('show', window.scrollY > 600);
-  });
-  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+  if(top){
+    window.addEventListener('scroll', function(){
+      top.classList.toggle('show', window.scrollY > 600);
+    });
+    top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+  }
 
-  document.getElementById('menu').addEventListener('click', function(){
-    document.querySelector('.sidebar').classList.toggle('show');
-  });
+  var menuBtn = document.getElementById('menu');
+  if(menuBtn){
+    menuBtn.addEventListener('click', function(){
+      var sb = document.querySelector('.sidebar');
+      if(sb) sb.classList.toggle('show');
+    });
+  }
 
   window.addEventListener('hashchange', openFromHash);
   openFromHash();
   filter();
 })();
-
+</script>
+<script>
 document.querySelectorAll('.dd>button').forEach(function(b){
   b.addEventListener('click', function(e){
     e.stopPropagation();
@@ -4800,16 +4815,70 @@ document.querySelectorAll('.dd>button').forEach(function(b){
 document.addEventListener('click', function(){
   document.querySelectorAll('.dd').forEach(function(o){ o.classList.remove('open'); });
 });
-document.querySelectorAll('.codebox .bar button').forEach(function(b){
-  b.addEventListener('click', function(){
-    var pre = b.closest('.codebox').querySelector('code');
-    navigator.clipboard.writeText(pre.innerText).then(function(){
-      var t = b.textContent; b.textContent = 'Copied';
-      setTimeout(function(){ b.textContent = t; }, 1400);
+(function(){
+  // navigator.clipboard needs a secure context, permission and a focused document -
+  // none of which are guaranteed (iframes and embedded viewers often refuse it), so
+  // fall back to the old execCommand path before giving up.
+  function legacyCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    var sel = window.getSelection();
+    var saved = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(err) { ok = false; }
+    document.body.removeChild(ta);
+    if(saved && sel){ sel.removeAllRanges(); sel.addRange(saved); }
+    return ok;
+  }
+
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text).then(
+        function(){ return true; },
+        function(){ return legacyCopy(text); }
+      );
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  document.querySelectorAll('.codebox .bar button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var code = b.closest('.codebox').querySelector('code');
+      if(!b.dataset.label) b.dataset.label = b.textContent;
+      var label = b.dataset.label;
+      b.classList.add('copying');   // immediate feedback, independent of the clipboard promise
+      copyText(code.innerText).then(function(ok){
+        b.classList.remove('copying');
+        if(ok){
+          b.textContent = 'Copied';
+          b.classList.add('copied');
+        } else {
+          // still blocked: select the code so a manual Ctrl+C works
+          var range = document.createRange();
+          range.selectNodeContents(code);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          b.textContent = 'Now press Ctrl+C';
+          b.classList.add('failed');
+        }
+        setTimeout(function(){
+          b.textContent = label;
+          b.classList.remove('copied', 'failed');
+        }, 1800);
+      });
     });
   });
-});
-
+})();
+</script>
+<script>
 (function(){
   var targets = Array.prototype.slice.call(document.querySelectorAll('[data-rv]'));
   if(targets.length && 'IntersectionObserver' in window){
@@ -4848,7 +4917,8 @@ document.querySelectorAll('.codebox .bar button').forEach(function(b){
   }, {rootMargin:'-18% 0px -72% 0px'});
   Object.keys(map).forEach(function(id){ io2.observe(document.getElementById(id)); });
 })();
-
+</script>
+<script>
 (function(){
   var bar = document.getElementById('progress');
   var top = document.getElementById('totop');

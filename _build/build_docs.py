@@ -1096,13 +1096,13 @@ JS = """
     }
   }
 
-  nav.addEventListener('click', function(e){
+  if(nav) nav.addEventListener('click', function(e){
     var link = e.target.closest('.nav-module-link');
     if(link){ link.parentElement.classList.toggle('open'); }
   });
 
   function filter(){
-    var term = (q.value || '').trim().toLowerCase();
+    var term = ((q && q.value) || '').trim().toLowerCase();
     var shown = 0, shownMods = 0;
     navMods.forEach(function(nm){
       var name = nm.getAttribute('data-search') || '';
@@ -1137,23 +1137,34 @@ JS = """
     hint.textContent = term ? (shown + ' module' + (shown===1?'':'s') + ' matched') : (modules.length + ' modules');
   }
 
-  q.addEventListener('input', filter);
-  q.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ q.value=''; filter(); } });
+  if(q){
+    q.addEventListener('input', filter);
+    q.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ q.value=''; filter(); } });
+  }
 
   // keyboard: "/" focuses search
   document.addEventListener('keydown', function(e){
-    if(e.key === '/' && document.activeElement !== q){ e.preventDefault(); q.focus(); }
+    if(e.key === '/' && q && document.activeElement !== q){ e.preventDefault(); q.focus(); }
   });
 
+  // Every element below is optional: this block is shared by templates that do not
+  // all have the same chrome. A null here used to abort the whole script, which
+  // silently disabled the copy buttons further down.
   var top = document.getElementById('totop');
-  window.addEventListener('scroll', function(){
-    top.classList.toggle('show', window.scrollY > 600);
-  });
-  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+  if(top){
+    window.addEventListener('scroll', function(){
+      top.classList.toggle('show', window.scrollY > 600);
+    });
+    top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+  }
 
-  document.getElementById('menu').addEventListener('click', function(){
-    document.querySelector('.sidebar').classList.toggle('show');
-  });
+  var menuBtn = document.getElementById('menu');
+  if(menuBtn){
+    menuBtn.addEventListener('click', function(){
+      var sb = document.querySelector('.sidebar');
+      if(sb) sb.classList.toggle('show');
+    });
+  }
 
   window.addEventListener('hashchange', openFromHash);
   openFromHash();

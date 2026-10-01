@@ -109,6 +109,9 @@ footer.site .fbot{max-width:1180px; margin:20px auto 0; padding-top:16px; border
   color:var(--muted); border-radius:6px; padding:3px 10px; cursor:pointer;
 }
 .codebox .bar button:hover{color:var(--ink); border-color:var(--accent)}
+.codebox .bar button.copied{color:#0d9488; border-color:#0d9488}
+.codebox .bar button.failed{color:#ea580c; border-color:#ea580c}
+.codebox .bar button.copying{opacity:.55}
 .codebox pre{margin:0; border:none; border-radius:0; max-height:620px}
 /* api page: sidebar sits below the sticky top nav */
 .api-shell .sidebar{top:58px; height:calc(100vh - 58px)}
@@ -415,15 +418,68 @@ document.querySelectorAll('.dd>button').forEach(function(b){
 document.addEventListener('click', function(){
   document.querySelectorAll('.dd').forEach(function(o){ o.classList.remove('open'); });
 });
-document.querySelectorAll('.codebox .bar button').forEach(function(b){
-  b.addEventListener('click', function(){
-    var pre = b.closest('.codebox').querySelector('code');
-    navigator.clipboard.writeText(pre.innerText).then(function(){
-      var t = b.textContent; b.textContent = 'Copied';
-      setTimeout(function(){ b.textContent = t; }, 1400);
+(function(){
+  // navigator.clipboard needs a secure context, permission and a focused document -
+  // none of which are guaranteed (iframes and embedded viewers often refuse it), so
+  // fall back to the old execCommand path before giving up.
+  function legacyCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    var sel = window.getSelection();
+    var saved = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(err) { ok = false; }
+    document.body.removeChild(ta);
+    if(saved && sel){ sel.removeAllRanges(); sel.addRange(saved); }
+    return ok;
+  }
+
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text).then(
+        function(){ return true; },
+        function(){ return legacyCopy(text); }
+      );
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  document.querySelectorAll('.codebox .bar button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var code = b.closest('.codebox').querySelector('code');
+      if(!b.dataset.label) b.dataset.label = b.textContent;
+      var label = b.dataset.label;
+      b.classList.add('copying');   // immediate feedback, independent of the clipboard promise
+      copyText(code.innerText).then(function(ok){
+        b.classList.remove('copying');
+        if(ok){
+          b.textContent = 'Copied';
+          b.classList.add('copied');
+        } else {
+          // still blocked: select the code so a manual Ctrl+C works
+          var range = document.createRange();
+          range.selectNodeContents(code);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          b.textContent = 'Now press Ctrl+C';
+          b.classList.add('failed');
+        }
+        setTimeout(function(){
+          b.textContent = label;
+          b.classList.remove('copied', 'failed');
+        }, 1800);
+      });
     });
   });
-});
+})();
 """
 
 
@@ -512,7 +568,11 @@ def footer_html(in_pages: bool) -> str:
     )
 
 
-def page_shell(title: str, css: str, body: str, js: str = "", desc: str = "") -> str:
+def page_shell(title: str, css: str, body: str, js="", desc: str = "") -> str:
+    """Wrap a page. `js` may be a string or a list of independent scripts; each is
+    emitted in its own <script> tag so one failing module cannot stop the others."""
+    blocks = [js] if isinstance(js, str) else list(js)
+    scripts = "\n".join(f"<script>{b}</script>" for b in blocks if b)
     return (
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
         '<meta charset="utf-8">\n'
@@ -520,7 +580,7 @@ def page_shell(title: str, css: str, body: str, js: str = "", desc: str = "") ->
         f"<title>{html.escape(title)}</title>\n"
         f'<meta name="description" content="{html.escape(desc)}">\n'
         f"<style>{css}</style>\n</head>\n<body>\n{body}\n"
-        f"<script>{js}</script>\n</body>\n</html>\n"
+        f"{scripts}\n</body>\n</html>\n"
     )
 
 
@@ -1072,7 +1132,7 @@ def landing_page() -> str:
         '<a href="pages/license.html">License</a></nav></footer>'
         "</div>"
     )
-    js = "var LOGO_DATA_URI = '" + LOGO_URI + "';\n" + PARTICLES_JS
+    js = ["var LOGO_DATA_URI = '" + LOGO_URI + "';", PARTICLES_JS]
     return page_shell(
         "WatermarkLab \u2014 Robust Image Watermarking Toolkit",
         LANDING_CSS,
@@ -1106,7 +1166,7 @@ def doc_page(title: str, active: str, content: str, desc: str = "") -> str:
         + "</main>"
         + footer_html(True)
     )
-    return page_shell(title + " \u2014 WatermarkLab", docs_css(), body, DD_JS, desc)
+    return page_shell(title + " \u2014 WatermarkLab", docs_css(), body, [DD_JS], desc)
 
 
 def reference_sections(dump: dict) -> tuple[str, str]:
@@ -1256,7 +1316,7 @@ def api_page(dump: dict) -> str:
         "API Reference \u2014 WatermarkLab",
         docs_css(),
         body,
-        bd.JS + DD_JS + DOCS_FX_JS + POLISH_JS,
+        [bd.JS, DD_JS, DOCS_FX_JS, POLISH_JS],
         "Complete API reference for WatermarkLab: evaluation frameworks, watermark models, attacks, metrics, datasets and visualization utilities.",
     )
 
